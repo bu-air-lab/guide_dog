@@ -1,0 +1,21 @@
+v0:
+
+	terrain_proportions = [0, 1.0, 0, 0, 0]
+	include linear vel. Linear vel noise = 0.25
+	terminate on limb contact
+	terminate on low base height
+
+v1:
+
+	sample angular vel commands directly
+	
+	Train on only the following reward terms:
+
+		_reward_torques
+		_reward_dof_vel
+		_reward_tracking_lin_vel
+		_reward_tracking_ang_vel
+
+v2:
+
+	play with external forces more
