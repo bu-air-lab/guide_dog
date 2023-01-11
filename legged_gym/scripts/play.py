@@ -42,7 +42,9 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 20)
+    env_cfg.env.isRAO = False
+
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
@@ -52,13 +54,17 @@ def play(args):
 
     env_cfg.terrain.mesh_type = 'plane'
 
+    env_cfg.commands.ranges.lin_vel_x = [0, 1] # min max [m/s]
+    env_cfg.commands.ranges.lin_vel_y = [0, 0]   # min max [m/s]
+    env_cfg.commands.ranges.ang_vel_yaw = [0, 0]    # min max [rad/s]
+
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
     obs = env.get_observations()
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
-    policy = ppo_runner.get_inference_policy(device=env.device)
+    policy, state_estimator = ppo_runner.get_inference_policy(device=env.device)
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -77,6 +83,11 @@ def play(args):
     img_idx = 0
 
     for i in range(10*int(env.max_episode_length)):
+
+        #Update obs with estimated base_vel (replace features at the end of obs)
+        estimated_base_lin_vel = state_estimator(obs)
+        obs = torch.cat((obs[:, :-3], estimated_base_lin_vel),dim=-1)
+
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())
         if RECORD_FRAMES:

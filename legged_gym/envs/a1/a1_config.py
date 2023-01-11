@@ -54,14 +54,28 @@ class GuideDogCfg( LeggedRobotCfg ):
 
         num_envs = 4096
         num_observations = 42
+        num_privileged_obs = 42 #true lin_vel is used to update critic
 
         min_base_height = 0.25
+
+        isRAO = False
+        rao_torque_range = [-5, 5]
+
+    class domain_rand ( LeggedRobotCfg.domain_rand ):
+
+        randomize_base_mass = False
+
+        push_robots = True
+        push_interval_s = 15 #How often to push (lower means more frequent)
+        max_push_vel = 1 #Max push velocity
+
+        randomize_friction = True
 
     class terrain( LeggedRobotCfg.terrain ):
 
         #Only train over random_uniform_noise terrain
         terrain_proportions = [0, 1.0, 0, 0, 0]
-
+        #mesh_type = 'plane'
 
 
     class commands( LeggedRobotCfg.commands ):
@@ -79,6 +93,9 @@ class GuideDogCfg( LeggedRobotCfg ):
         decimation = 4
 
     class noise ( LeggedRobotCfg.noise ):
+
+        add_noise = True
+
         class noise_scales ( LeggedRobotCfg.noise.noise_scales ):
             lin_vel = 0.25
   
@@ -87,22 +104,7 @@ class GuideDogCfg( LeggedRobotCfg ):
         base_height_target = 0.25
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = -0.0002
-            #dof_pos_limits = -10.0
-
-            dof_pos_limits = 0.
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            lin_vel_z = 0.
-            ang_vel_xy = 0.
-            orientation = 0.
-            dof_vel = -0.0002
-            dof_acc = 0.
-            base_height = -0. 
-            feet_air_time = 0.
-            collision = 0.
-            feet_stumble = 0. 
-            action_rate = 0.
-            stand_still = 0.
+            dof_pos_limits = -10.0
 
     class asset( LeggedRobotCfg.asset ):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/a1/urdf/a1.urdf'
@@ -119,7 +121,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "v0" # -1 = last run
-        checkpoint = 1500 # -1 = last saved model
-
-  
+        load_run = "v12" # -1 = last run
+        checkpoint = 50 # -1 = last saved model

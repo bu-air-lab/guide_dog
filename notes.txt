@@ -5,6 +5,13 @@ v0:
 	terminate on limb contact
 	terminate on low base height
 
+	push_interval_s = 15
+    max_push_vel = 1
+
+    only push in xy directions
+
+	looks good
+
 v1:
 
 	sample angular vel commands directly
@@ -16,6 +23,142 @@ v1:
 		_reward_tracking_lin_vel
 		_reward_tracking_ang_vel
 
-v2:
+	gait is very high frequency/unnatural
 
-	play with external forces more
+**v2:
+
+	v0 + sample angular vel commands directly
+
+	push_interval_s = 15
+    max_push_vel = 1
+
+	**looks good, transfers to real
+
+	force tolerance:
+
+		left: looks bad at 2.5k (changes heading, stumbles)
+		right: falls at 3k
+
+
+
+v3:
+
+	push in xyz directions
+
+	push_interval_s = 2
+    max_push_vel = 3
+
+    looks good
+
+    force tolerance:
+
+    	left: looks bad at 2.5k
+    	right: falls at 4k
+
+v4:
+
+	push_interval_s = 1
+    max_push_vel = 5
+
+    looks good, but training reward very low. Maybe pushes are too harsh?
+
+v5:
+
+	push_interval_s = 1
+    max_push_vel = 3
+
+    same as v4
+
+v6:
+
+	push_interval_s = 1
+    max_push_vel = 2
+
+    looks good and accumulates reward during training
+
+
+    force tolerance:
+
+    	looks weird after a few hundred steps with no force added
+
+    	left: falls at 2.5k
+    	right: eventually falls at 3.5k
+
+Baseline:
+
+	no pushes
+
+
+    force tolerance:
+
+		seems slightly less robust than v2
+
+v7:
+
+	v2 but on flat ground
+
+	slightly better robustness to pushes
+	feet are sliding on ground
+
+
+v8:
+
+	RAO from: Learning and Deploying Robust Locomotion Policies with Minimal Dynamics Randomization
+
+		sample extra torque from Uniform [-10, 10]
+
+		remove all other domain randomization and observation noise
+
+		* looks really weird. Stutters.
+
+v9:
+
+	torques from [-5, 5]
+
+	looks good in sim, but still doesnt appear robust to external forces
+
+	Doesnt transfer to real
+
+v10:
+
+	torque from [-7, 7]
+
+	looks bad
+
+v11:
+
+	torques from [-5, 5]
+
+	train on flat ground
+
+	looks good in sim, but not robust to external pushes
+
+	Doesnt transfer to real
+
+
+
+v12:
+
+	remove RAO, add back noise, domain rand, and rough terrain
+
+	estimate base vel from neural net.
+
+v13:
+
+	update observation space to include joint history errors, components from https://arxiv.org/pdf/2202.05481.pdf
+
+
+Notes:
+
+
+	- estimate linear vel via neural net?
+	- estimate external force via neural net?
+		- see https://arxiv.org/pdf/2202.05481.pdf
+
+	- should we train our force estimator jointly with our controller?
+	- See other work which estimates linear vel, copy that approach for force estimation
+	- Next, compare policy that includes estimated force in state, to policies that don't
+
+	- should we increase force of external pushes via curriculum?
+
+	- Try RAO again after we estimate linear vel from neural net
