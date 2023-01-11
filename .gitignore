@@ -7,6 +7,8 @@
 node_modules/
 dist/
 
+pybullet_val/saved_models/
+
 # Compiled Java class files
 *.class
 
