@@ -6,6 +6,7 @@
 # Node artifact files
 node_modules/
 dist/
+notes.txt
 
 pybullet_val/saved_models/
 

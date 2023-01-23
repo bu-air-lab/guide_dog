@@ -1,6 +1,21 @@
 # Training Force Tolerant Guide dog Controllers #
 
-Based on code from: https://github.com/leggedrobotics/legged_gym
+Based on code from: https://github.com/leggedrobotics/legged_gym and https://github.com/leggedrobotics/rsl_rl
+
+#Install
+
+In main Directory, run:
+
+```
+pip3 install -e .
+```
+
+Next, run:
+
+```
+cd guide_dog_ppo
+pip3 install -e .
+```
 
 #Training
 

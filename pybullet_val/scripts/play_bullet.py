@@ -1,11 +1,13 @@
 from bullet_env.bullet_env import BulletEnv
 from bullet_env.blank_env import BlankEnv
 
-from rsl_rl.runners import OnPolicyRunner
+from guide_dog_ppo.runners import OnPolicyRunner
 
 import numpy as np
 import torch
-    
+
+import pybullet as p
+
 #Load env:
 #env = BulletEnv(isGUI=False)
 env = BulletEnv(isGUI=True)
@@ -21,20 +23,34 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
 #ppo_runner.load("/home/dave/Desktop/guide_dog/pybullet_val/saved_models/baseline.pt")
-ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v11.pt")
+ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v19.pt")
 
-policy = ppo_runner.get_inference_policy()
+policy, state_estimator = ppo_runner.get_inference_policy()
 
 obs,_ = env.reset()
 
 #First command is all 0's
 #obs = [0 for x in range(42)]
 
+#obs = torch.Tensor(obs).unsqueeze(0)
+
 for env_step in range(1000):
 
-    #print("env step:", env_step)
+    obs = torch.Tensor(obs)#.unsqueeze(0)
 
-    #print("Base Velocity:", [round(x,2) for x in obs[:3]])
+
+    #Update obs with estimated base_vel (replace features at the end of obs)
+    estimated_state = state_estimator(obs.unsqueeze(0))
+    obs = torch.cat((obs[:-6], estimated_state[0]),dim=-1)
+
+    #print("Estimated Base Velocity:", [round((x/2),2) for x in estimated_state[0][:3].tolist()])
+    print("Estimated Force:", [round((x/2),2) for x in estimated_state[0][3:].tolist()])
+
+    linear_vel, _ = p.getBaseVelocity(env.robot)
+
+    #print("True base vel:", [round(x,2) for x in linear_vel])
+
+    #print("Error:", np.abs((estimated_state[0][0].item()/2) - linear_vel[0]))
 
     action = policy(torch.Tensor(obs)).detach()
 

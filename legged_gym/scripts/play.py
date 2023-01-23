@@ -42,7 +42,7 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 20)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 10)
     env_cfg.env.isRAO = False
 
     env_cfg.terrain.num_rows = 5
@@ -50,11 +50,15 @@ def play(args):
     env_cfg.terrain.curriculum = False
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
+
     env_cfg.domain_rand.push_robots = False
+    #env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
+    #env_cfg.domain_rand.max_push_vel = 2.5#1 #Max push velocity
+    #env_cfg.domain_rand.push_length_interval = [1, 20]
 
     env_cfg.terrain.mesh_type = 'plane'
 
-    env_cfg.commands.ranges.lin_vel_x = [0, 1] # min max [m/s]
+    env_cfg.commands.ranges.lin_vel_x = [.75, .75] # min max [m/s]
     env_cfg.commands.ranges.lin_vel_y = [0, 0]   # min max [m/s]
     env_cfg.commands.ranges.ang_vel_yaw = [0, 0]    # min max [rad/s]
 
@@ -85,8 +89,10 @@ def play(args):
     for i in range(10*int(env.max_episode_length)):
 
         #Update obs with estimated base_vel (replace features at the end of obs)
-        estimated_base_lin_vel = state_estimator(obs)
-        obs = torch.cat((obs[:, :-3], estimated_base_lin_vel),dim=-1)
+        estimated_state = state_estimator(obs)
+        obs = torch.cat((obs[:, :-6], estimated_state),dim=-1)
+
+        #print("Estimated State:", estimated_state)
 
         actions = policy(obs.detach())
         obs, _, rews, dones, infos = env.step(actions.detach())

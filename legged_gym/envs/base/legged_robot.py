@@ -33,6 +33,7 @@ from time import time
 from warnings import WarningMessage
 import numpy as np
 import os
+import random
 
 from isaacgym.torch_utils import *
 from isaacgym import gymtorch, gymapi, gymutil
@@ -74,6 +75,19 @@ class LeggedRobot(BaseTask):
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
         self._init_buffers()
         self._prepare_reward_function()
+
+        #Store past N timesteps of joint positions and velocities to include in state
+        self.past_dof_pos = []
+        self.past_dof_vel = []
+
+        for i in range(4):
+            self.past_dof_pos.append(self.default_dof_pos[0].repeat(self.num_envs, 1))
+            self.past_dof_vel.append(torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float))
+
+        self.external_force_vectors = torch.zeros(self.num_envs, 3, device=self.device, dtype=torch.float)
+
+        self.push_length = 0
+
         self.init_done = True
 
     def step(self, actions):
@@ -101,7 +115,7 @@ class LeggedRobot(BaseTask):
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
 
-        #print("True base vel:", self.privileged_obs_buf[:,-3:])
+        #print(self.external_force_vectors)
 
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
@@ -129,6 +143,14 @@ class LeggedRobot(BaseTask):
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
+
+        #Update joint angles and joint velocities history
+        self.past_dof_pos.pop()
+        self.past_dof_pos.insert(0, self.dof_pos.clone())
+
+        self.past_dof_vel.pop()
+        self.past_dof_vel.insert(0, self.dof_vel.clone())
+
         self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
 
         self.last_actions[:] = self.actions[:]
@@ -197,6 +219,14 @@ class LeggedRobot(BaseTask):
         # send timeout info to the algorithm
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
+
+        #Reset joint angle and velocity histories
+        #This is probably innefficient :(
+
+        for i in range(4):
+            for _id in env_ids:
+                self.past_dof_pos[i][_id] = self.default_dof_pos[0]
+                self.past_dof_vel[i][_id] = torch.zeros(1, 12, device=self.device, dtype=torch.float)
     
     def compute_reward(self):
         """ Compute rewards
@@ -224,19 +254,52 @@ class LeggedRobot(BaseTask):
                                     #self.base_ang_vel  * self.obs_scales.ang_vel,
                                     #self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #self.dof_vel * self.obs_scales.dof_vel,
+                                    (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
+
+                                    self.past_dof_vel[0] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[1] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[2] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[3] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[4] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[5] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[6] * self.obs_scales.dof_vel,
+
                                     self.actions,
-                                    torch.zeros(self.num_envs, 3, device=self.device, dtype=torch.float) #placeholder for estimated base_lin_vel
+                                    torch.zeros(self.num_envs, 6, device=self.device, dtype=torch.float) #placeholder for estimated base_lin_vel
                                     ),dim=-1)
 
         #Include ground truth base linear velocity for critic observation
         self.privileged_obs_buf = torch.cat(( 
                                     self.commands[:, :3] * self.commands_scale,
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
+                                    #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #self.dof_vel * self.obs_scales.dof_vel,
+                                    (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
+
+                                    self.past_dof_vel[0] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[1] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[2] * self.obs_scales.dof_vel,
+                                    self.past_dof_vel[3] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[4] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[5] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[6] * self.obs_scales.dof_vel,
+
                                     self.actions,
-                                    self.base_lin_vel * self.obs_scales.lin_vel
+                                    self.base_lin_vel * self.obs_scales.lin_vel,
+                                    self.external_force_vectors
                                     ),dim=-1)
         # add perceptive inputs if not blind
         # if self.cfg.terrain.measure_heights:
@@ -353,8 +416,17 @@ class LeggedRobot(BaseTask):
 
         if self.cfg.terrain.measure_heights:
             self.measured_heights = self._get_heights()
+
+        #Select push direction and length, and apply push
         if self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
+            self._select_push_parameters()
             self._push_robots()
+
+        #Keep applying push of the same selected direction
+        elif self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval <= self.push_length):
+            self._push_robots()
+        else:
+            self.external_force_vectors[:,:] = 0
 
     def _resample_commands(self, env_ids):
         """ Randommly select commands of some environments
@@ -442,12 +514,27 @@ class LeggedRobot(BaseTask):
                                                      gymtorch.unwrap_tensor(self.root_states),
                                                      gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
 
+    def _select_push_parameters(self):
+
+        #Select push direction and magnitude
+        max_vel = self.cfg.domain_rand.max_push_vel
+        xy_push = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device)
+        z_push = torch_rand_float(0, self.cfg.domain_rand.max_z_vel, (self.num_envs, 1), device=self.device)
+
+        #Save selected push
+        self.external_force_vectors[:, :2] = xy_push
+        self.external_force_vectors[:, 2] = z_push[:,0]
+
+        #Select push length (each env gets same push length)
+        self.push_length = random.randint(self.cfg.domain_rand.push_length_interval[0], self.cfg.domain_rand.push_length_interval[1])
+
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
-        max_vel = self.cfg.domain_rand.max_push_vel
-        self.root_states[:, 7:9] = torch_rand_float(-max_vel, max_vel, (self.num_envs, 2), device=self.device) # lin vel x/y
-        self.root_states[:, 9:10] = torch_rand_float(0, max_vel, (self.num_envs, 1), device=self.device) # lin vel z
+
+        #Apply push
+        self.root_states[:, 7:9] = self.external_force_vectors[:, :2]
+        self.root_states[:, 9:10] = self.external_force_vectors[:, 2].unsqueeze(1)
         self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 
     def _update_terrain_curriculum(self, env_ids):
@@ -500,9 +587,15 @@ class LeggedRobot(BaseTask):
         noise_level = self.cfg.noise.noise_level
 
         noise_vec[:3] = 0. # commands
-        noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[15:27] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[27:30] = 0. # previous actions
+        noise_vec[3:51] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[51:99] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[99:111] = 0. # previous actions
+        noise_vec[111:117] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
+
+        # noise_vec[:3] = 0. # commands
+        # noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        # noise_vec[15:27] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        # noise_vec[27:30] = 0. # previous actions
 
         # noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
         # noise_vec[3:6] = 0. # commands
