@@ -9,7 +9,8 @@ class PPO:
     actor_critic: ActorCritic
     def __init__(self,
                  actor_critic,
-                 state_estimator,
+                 base_velocity_estimator,
+                 force_estimator,
                  num_learning_epochs=1,
                  num_mini_batches=1,
                  clip_param=0.2,
@@ -38,11 +39,17 @@ class PPO:
         self.optimizer = optim.Adam(self.actor_critic.parameters(), lr=learning_rate)
         self.transition = RolloutStorage.Transition()
 
-        # State estimator
-        self.state_estimator = state_estimator
-        self.state_estimator.to(self.device)
-        self.state_estimator_loss = nn.MSELoss()
-        self.state_estimator_optimizer = optim.Adam(self.state_estimator.parameters(), lr=learning_rate)
+        # Base velocity estimator
+        self.base_velocity_estimator = base_velocity_estimator
+        self.base_velocity_estimator.to(self.device)
+        self.base_velocity_estimator_loss = nn.MSELoss()
+        self.base_velocity_estimator_optimizer = optim.Adam(self.base_velocity_estimator.parameters(), lr=learning_rate)
+
+        # Force estimator
+        self.force_estimator = force_estimator
+        self.force_estimator.to(self.device)
+        self.force_estimator_loss = nn.MSELoss()
+        self.force_estimator_optimizer = optim.Adam(self.force_estimator.parameters(), lr=learning_rate)
 
         # PPO parameters
         self.clip_param = clip_param
@@ -69,8 +76,11 @@ class PPO:
             self.transition.hidden_states = self.actor_critic.get_hidden_states()
 
         #Update obs with estimated state (replace features at the end of obs)
-        estimated_state = self.state_estimator(obs)
-        obs = torch.cat((obs[:, :-6], estimated_state),dim=-1)
+        estimated_base_vel = self.base_velocity_estimator(obs)
+        estimated_force = self.force_estimator(obs)
+
+        obs = torch.cat((obs[:, :-6], estimated_base_vel),dim=-1)
+        obs = torch.cat((obs, estimated_force),dim=-1)
 
         # Compute the actions and values
         self.transition.actions = self.actor_critic.act(obs).detach()
@@ -163,17 +173,54 @@ class PPO:
                 mean_value_loss += value_loss.item()
                 mean_surrogate_loss += surrogate_loss.item()
 
-                # Update state_estimator params (via supervised learning)
-                true_state = critic_obs_batch[:,-6:]
-                predicted_state = self.state_estimator(obs_batch)
-                state_estimator_computed_loss = self.state_estimator_loss(predicted_state, true_state)
+                # Update base vel estimator via supervised learning
+                true_base_vel = critic_obs_batch[:,-6:-3]
+                predicted_base_vel = self.base_velocity_estimator(obs_batch)
+                base_velocity_estimator_computed_loss = self.base_velocity_estimator_loss(predicted_base_vel, true_base_vel)
 
-                self.state_estimator_optimizer.zero_grad()
-                state_estimator_computed_loss.backward()
-                self.state_estimator_optimizer.step()
+                self.base_velocity_estimator_optimizer.zero_grad()
+                base_velocity_estimator_computed_loss.backward()
+                self.base_velocity_estimator_optimizer.step()
 
-                #print("State Estimator Loss:", state_estimator_computed_loss.item())
+                #print("Base Vel Estimator Loss:", base_velocity_estimator_computed_loss.item())
 
+                # Update force estimator via supervised learning
+                true_force = critic_obs_batch[:,-3:]
+
+                #print("True Force:", true_force)
+                #print(true_force.shape)
+                #print(torch.count_nonzero(true_force))
+
+                #Only update force estimator if batch contains some non-zero forces
+                if(torch.count_nonzero(true_force).item() > 0):
+
+                    #Ensure only 10% of batch is 0 forces
+                    num_nonzero_samples = int(torch.count_nonzero(true_force).item()/3)
+                    num_total_samples = int(num_nonzero_samples/0.5)
+                    num_zero_samples =  num_total_samples - num_nonzero_samples
+
+
+                    zero_force_indicies = (true_force[:,0] == 0).nonzero()
+                    selected_zero_samples = critic_obs_batch[zero_force_indicies[:num_zero_samples]]
+
+                    non_zero_force_indicies = (true_force[:,0] != 0).nonzero()
+                    selected_nonzero_samples = critic_obs_batch[non_zero_force_indicies]
+
+                    #Re-combine selected samples and randomly shuffle
+                    rebalanced_critic_obs_batch = torch.cat(( selected_nonzero_samples, selected_zero_samples ),dim=0)
+                    rebalanced_critic_obs_batch = rebalanced_critic_obs_batch[torch.randperm(rebalanced_critic_obs_batch.size()[0])]
+                    rebalanced_critic_obs_batch = rebalanced_critic_obs_batch.squeeze(1)
+
+                    rebalanced_true_force = rebalanced_critic_obs_batch[:,-3:]
+
+                    predicted_force = self.force_estimator(rebalanced_critic_obs_batch)
+                    force_estimator_computed_loss = self.force_estimator_loss(predicted_force, rebalanced_true_force)
+
+                    self.force_estimator_optimizer.zero_grad()
+                    force_estimator_computed_loss.backward()
+                    self.force_estimator_optimizer.step()
+
+                    print("Force Estimator Loss:", force_estimator_computed_loss.item())
 
 
         num_updates = self.num_learning_epochs * self.num_mini_batches

@@ -309,7 +309,7 @@ class LeggedRobot(BaseTask):
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
             self.privileged_obs_buf += (2 * torch.rand_like(self.privileged_obs_buf) - 1) * self.noise_scale_vec
-
+                
     def create_sim(self):
         """ Creates simulation, terrain and evironments
         """
@@ -590,7 +590,7 @@ class LeggedRobot(BaseTask):
         noise_vec[3:51] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
         noise_vec[51:99] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
         noise_vec[99:111] = 0. # previous actions
-        noise_vec[111:117] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
+        noise_vec[111:117] = 0. #noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
 
         # noise_vec[:3] = 0. # commands
         # noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos

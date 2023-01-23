@@ -7,7 +7,7 @@ import statistics
 import torch
 
 from guide_dog_ppo.algorithms import PPO
-from guide_dog_ppo.modules import ActorCritic, ActorCriticRecurrent, StateEstimator
+from guide_dog_ppo.modules import ActorCritic, ActorCriticRecurrent, BaseVelocityEstimator, ForceEstimator
 from guide_dog_ppo.env import VecEnv
 
 
@@ -29,7 +29,8 @@ class OnPolicyRunner:
         else:
             num_critic_obs = self.env.num_obs
 
-        state_estimator = StateEstimator(self.env.num_obs).to(self.device)
+        base_velocity_estimator = BaseVelocityEstimator(self.env.num_obs).to(self.device)
+        force_estimator = ForceEstimator(self.env.num_obs).to(self.device)
 
         actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCritic
         actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
@@ -38,7 +39,7 @@ class OnPolicyRunner:
                                                         **self.policy_cfg).to(self.device)
 
         alg_class = eval(self.cfg["algorithm_class_name"]) # PPO
-        self.alg: PPO = alg_class(actor_critic, state_estimator, device=self.device, **self.alg_cfg)
+        self.alg: PPO = alg_class(actor_critic, base_velocity_estimator, force_estimator, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 
@@ -189,7 +190,8 @@ class OnPolicyRunner:
         torch.save({
             #'model_state_dict': self.alg.actor_critic.state_dict(),
             'actor_critic_state_dict': self.alg.actor_critic.state_dict(),
-            'state_estimator_state_dict': self.alg.state_estimator.state_dict(),
+            'base_velocity_estimator_state_dict': self.alg.base_velocity_estimator.state_dict(),
+            'force_estimator_state_dict': self.alg.force_estimator.state_dict(),
             'optimizer_state_dict': self.alg.optimizer.state_dict(),
             'iter': self.current_learning_iteration,
             'infos': infos,
@@ -199,7 +201,8 @@ class OnPolicyRunner:
         loaded_dict = torch.load(path)
         #self.alg.actor_critic.load_state_dict(loaded_dict['model_state_dict'])
         self.alg.actor_critic.load_state_dict(loaded_dict['actor_critic_state_dict'])
-        self.alg.state_estimator.load_state_dict(loaded_dict['state_estimator_state_dict'])
+        self.alg.base_velocity_estimator.load_state_dict(loaded_dict['base_velocity_estimator_state_dict'])
+        self.alg.force_estimator.load_state_dict(loaded_dict['force_estimator_state_dict'])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict['optimizer_state_dict'])
         self.current_learning_iteration = loaded_dict['iter']
@@ -207,8 +210,10 @@ class OnPolicyRunner:
 
     def get_inference_policy(self, device=None):
         self.alg.actor_critic.eval() # switch to evaluation mode (dropout for example)
-        self.alg.state_estimator.eval()
+        self.alg.base_velocity_estimator.eval()
+        self.alg.force_estimator.eval()
         if device is not None:
             self.alg.actor_critic.to(device)
-            self.alg.state_estimator.to(device)
-        return self.alg.actor_critic.act_inference, self.alg.state_estimator
+            self.alg.base_velocity_estimator.to(device)
+            self.alg.force_estimator.to(device)
+        return self.alg.actor_critic.act_inference, self.alg.base_velocity_estimator, self.alg.force_estimator

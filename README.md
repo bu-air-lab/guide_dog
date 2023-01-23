@@ -4,7 +4,7 @@ Based on code from: https://github.com/leggedrobotics/legged_gym and https://git
 
 ## Install
 
-In main Directory, run:
+First, run:
 
 ```
 pip3 install -e .
