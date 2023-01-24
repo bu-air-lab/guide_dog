@@ -42,7 +42,7 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 10)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
     env_cfg.env.isRAO = False
 
     env_cfg.terrain.num_rows = 5
@@ -51,10 +51,10 @@ def play(args):
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
 
-    env_cfg.domain_rand.push_robots = False
-    #env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
-    #env_cfg.domain_rand.max_push_vel = 2.5#1 #Max push velocity
-    #env_cfg.domain_rand.push_length_interval = [1, 20]
+    #env_cfg.domain_rand.push_robots = False
+    env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
+    env_cfg.domain_rand.max_push_vel = 2.5#1 #Max push velocity
+    env_cfg.domain_rand.push_length_interval = [1, 20]
 
     env_cfg.terrain.mesh_type = 'plane'
 
@@ -68,7 +68,7 @@ def play(args):
     # load policy
     train_cfg.runner.resume = True
     ppo_runner, train_cfg = task_registry.make_alg_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
-    policy, state_estimator = ppo_runner.get_inference_policy(device=env.device)
+    policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy(device=env.device)
     
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
@@ -88,9 +88,14 @@ def play(args):
 
     for i in range(10*int(env.max_episode_length)):
 
-        #Update obs with estimated base_vel (replace features at the end of obs)
-        estimated_state = state_estimator(obs)
-        obs = torch.cat((obs[:, :-6], estimated_state),dim=-1)
+        #Update obs with estimated base_vel and estimated force
+        estimated_base_vel = base_vel_estimator(obs)
+        estimated_force = force_estimator(obs)
+
+        print(estimated_force)
+
+        obs = torch.cat((obs[:, :-6], estimated_base_vel),dim=-1)
+        obs = torch.cat((obs, estimated_force),dim=-1)
 
         #print("Estimated State:", estimated_state)
 

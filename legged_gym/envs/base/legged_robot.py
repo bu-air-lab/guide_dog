@@ -531,7 +531,7 @@ class LeggedRobot(BaseTask):
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
-
+        #print("PUSH:", self.external_force_vectors)
         #Apply push
         self.root_states[:, 7:9] = self.external_force_vectors[:, :2]
         self.root_states[:, 9:10] = self.external_force_vectors[:, 2].unsqueeze(1)

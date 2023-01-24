@@ -240,10 +240,10 @@ class BulletEnv(gym.Env):
             print("APPLY FORCE")
 
             #Push right
-            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push left
-            #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push back
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[-applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
