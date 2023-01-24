@@ -176,6 +176,7 @@ class PPO:
                 # Update base vel estimator via supervised learning
                 true_base_vel = critic_obs_batch[:,-6:-3]
                 predicted_base_vel = self.base_velocity_estimator(obs_batch)
+
                 base_velocity_estimator_computed_loss = self.base_velocity_estimator_loss(predicted_base_vel, true_base_vel)
 
                 self.base_velocity_estimator_optimizer.zero_grad()
@@ -187,16 +188,13 @@ class PPO:
                 # Update force estimator via supervised learning
                 true_force = critic_obs_batch[:,-3:]
 
-                #print("True Force:", true_force)
-                #print(true_force.shape)
-                #print(torch.count_nonzero(true_force))
-
                 #Only update force estimator if batch contains some non-zero forces
                 if(torch.count_nonzero(true_force).item() > 0):
 
-                    #Ensure only 10% of batch is 0 forces
+                    #Ensure only some percentage of batch is 0 forces
+                    percentage_zero_samples = 0.0001
                     num_nonzero_samples = int(torch.count_nonzero(true_force).item()/3)
-                    num_total_samples = int(num_nonzero_samples/0.5)
+                    num_total_samples = int(num_nonzero_samples/(1-percentage_zero_samples))
                     num_zero_samples =  num_total_samples - num_nonzero_samples
 
 
@@ -213,7 +211,16 @@ class PPO:
 
                     rebalanced_true_force = rebalanced_critic_obs_batch[:,-3:]
 
+                    #Add estimated base velocities to observations
+                    #predicted_base_vel = self.base_velocity_estimator(rebalanced_critic_obs_batch)
+                    #rebalanced_critic_obs_batch[:,-6:-3] = predicted_base_vel.detach()
+
+                    #Predict applied force
                     predicted_force = self.force_estimator(rebalanced_critic_obs_batch)
+
+                    #print(predicted_force, rebalanced_true_force)
+                    #print("------------------------")
+
                     force_estimator_computed_loss = self.force_estimator_loss(predicted_force, rebalanced_true_force)
 
                     self.force_estimator_optimizer.zero_grad()

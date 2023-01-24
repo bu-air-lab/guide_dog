@@ -35,6 +35,7 @@ class ForceEstimator(nn.Module):
         
         #Force estimator doesn't take trailing zeros
         original_obs = obs[:, :-6]
+        #original_obs = obs[:, :-3]
 
         #Query force estimator
         estimated_force = self.force_estimator(original_obs)

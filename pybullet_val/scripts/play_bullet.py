@@ -1,3 +1,5 @@
+import time
+
 from bullet_env.bullet_env import BulletEnv
 from bullet_env.blank_env import BlankEnv
 
@@ -29,38 +31,31 @@ policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
 obs,_ = env.reset()
 
-#First command is all 0's
-#obs = [0 for x in range(42)]
 
-#obs = torch.Tensor(obs).unsqueeze(0)
 
 for env_step in range(1000):
 
-    obs = torch.Tensor(obs)#.unsqueeze(0)
+    obs = torch.Tensor(obs)
 
 
-    #Update obs with estimated base_vel (replace features at the end of obs)
-    estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
-    estimated_force = force_estimator(obs.unsqueeze(0))
+    with torch.no_grad():
 
-    #print(obs[:-6].shape, estimated_base_vel.shape)
+        #Update obs with estimated base_vel (replace features at the end of obs)
+        estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
+        estimated_force = force_estimator(obs.unsqueeze(0))
+
+
     obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
     obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
 
 
-    print(estimated_force)
-    #print("Estimated Base Velocity:", [round((x/2),2) for x in estimated_state[0][:3].tolist()])
-    #print("Estimated Force:", [round((x/2),2) for x in force_estimator[0][3:].tolist()])
+    #linear_vel, _ = p.getBaseVelocity(env.robot)
 
-    linear_vel, _ = p.getBaseVelocity(env.robot)
 
-    #print("True base vel:", [round(x,2) for x in linear_vel])
+    start_time = time.time()
 
-    #print("Error:", np.abs((estimated_state[0][0].item()/2) - linear_vel[0]))
+    with torch.no_grad():
 
-    action = policy(torch.Tensor(obs)).detach()
-
-    #print("Action:", action)
+        action = policy(torch.Tensor(obs)).detach()
 
     obs, rew, done, info = env.step(action.detach())
-
