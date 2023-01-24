@@ -86,7 +86,8 @@ class LeggedRobot(BaseTask):
 
         #Store 3D external force vectors for past 5 timesteps in each environment
         #env ID x force vector x history
-        self.external_force_vectors = torch.zeros(self.num_envs, 3, 3, device=self.device, dtype=torch.float)
+        self.external_force_history_length = 5
+        self.external_force_vectors = torch.zeros(self.num_envs, 3, self.external_force_history_length, device=self.device, dtype=torch.float)
 
         self.push_length = 0
 
@@ -301,7 +302,7 @@ class LeggedRobot(BaseTask):
 
                                     self.actions,
                                     self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.external_force_vectors[:,:,2] #Only include external force from 10 timesteps ago
+                                    self.external_force_vectors[:,:,self.external_force_history_length-1] #Only include external force from x timesteps ago
                                     ),dim=-1)
         # add perceptive inputs if not blind
         # if self.cfg.terrain.measure_heights:
