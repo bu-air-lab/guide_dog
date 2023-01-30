@@ -164,6 +164,11 @@ class PPO:
 
                 loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
+
+                #print(entropy_batch.mean())
+                #print("Surrogate Loss:", surrogate_loss.item())
+                #print("Value Loss:", value_loss.item())
+
                 # Update actor_critic params
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -176,7 +181,6 @@ class PPO:
                 # Update base vel estimator via supervised learning
                 true_base_vel = critic_obs_batch[:,-6:-3]
                 predicted_base_vel = self.base_velocity_estimator(obs_batch)
-
                 base_velocity_estimator_computed_loss = self.base_velocity_estimator_loss(predicted_base_vel, true_base_vel)
 
                 self.base_velocity_estimator_optimizer.zero_grad()
@@ -185,41 +189,41 @@ class PPO:
 
                 #print("Base Vel Estimator Loss:", base_velocity_estimator_computed_loss.item())
 
+
                 # Update force estimator via supervised learning
                 true_force = critic_obs_batch[:,-3:]
+                
+                """predicted_force = self.force_estimator(obs_batch)
+                force_estimator_computed_loss = self.force_estimator_loss(predicted_force, true_force)
+
+                self.force_estimator_optimizer.zero_grad()
+                force_estimator_computed_loss.backward()
+                self.force_estimator_optimizer.step()
+
+                print("Force Estimator Loss:", force_estimator_computed_loss.item())"""
 
                 #Only update force estimator if batch contains some non-zero forces
                 if(torch.count_nonzero(true_force).item() > 0):
 
                     #Ensure only some percentage of batch is 0 forces
-                    percentage_zero_samples = 0.0001
+                    percentage_zero_samples = 0.2
                     num_nonzero_samples = int(torch.count_nonzero(true_force).item()/3)
                     num_total_samples = int(num_nonzero_samples/(1-percentage_zero_samples))
                     num_zero_samples =  num_total_samples - num_nonzero_samples
 
-
                     zero_force_indicies = (true_force[:,0] == 0).nonzero()
-                    selected_zero_samples = critic_obs_batch[zero_force_indicies[:num_zero_samples]]
+                    zero_force_indicies = zero_force_indicies[:num_zero_samples]
 
                     non_zero_force_indicies = (true_force[:,0] != 0).nonzero()
-                    selected_nonzero_samples = critic_obs_batch[non_zero_force_indicies]
 
-                    #Re-combine selected samples and randomly shuffle
-                    rebalanced_critic_obs_batch = torch.cat(( selected_nonzero_samples, selected_zero_samples ),dim=0)
-                    rebalanced_critic_obs_batch = rebalanced_critic_obs_batch[torch.randperm(rebalanced_critic_obs_batch.size()[0])]
-                    rebalanced_critic_obs_batch = rebalanced_critic_obs_batch.squeeze(1)
+                    #Combine and shuffle indicies
+                    rebalanced_indicies = torch.cat(( zero_force_indicies, non_zero_force_indicies ),dim=0)
+                    rebalanced_indicies = rebalanced_indicies[torch.randperm(rebalanced_indicies.size()[0])]
 
-                    rebalanced_true_force = rebalanced_critic_obs_batch[:,-3:]
+                    rebalanced_true_force = critic_obs_batch[rebalanced_indicies,-3:].squeeze(1)
+                    rebalanced_samples = obs_batch[rebalanced_indicies, :].squeeze(1)
 
-                    #Add estimated base velocities to observations
-                    #predicted_base_vel = self.base_velocity_estimator(rebalanced_critic_obs_batch)
-                    #rebalanced_critic_obs_batch[:,-6:-3] = predicted_base_vel.detach()
-
-                    #Predict applied force
-                    predicted_force = self.force_estimator(rebalanced_critic_obs_batch)
-
-                    #print(predicted_force, rebalanced_true_force)
-                    #print("------------------------")
+                    predicted_force = self.force_estimator(rebalanced_samples)
 
                     force_estimator_computed_loss = self.force_estimator_loss(predicted_force, rebalanced_true_force)
 

@@ -53,8 +53,8 @@ def play(args):
 
     #env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
-    env_cfg.domain_rand.max_push_vel = 2.5#1 #Max push velocity
-    env_cfg.domain_rand.push_length_interval = [1, 20]
+    env_cfg.domain_rand.max_push_vel = 1.5 #1 #Max push velocity
+    env_cfg.domain_rand.push_length_interval = [1, 1]
 
     env_cfg.terrain.mesh_type = 'plane'
 
@@ -92,7 +92,7 @@ def play(args):
         estimated_base_vel = base_vel_estimator(obs)
         estimated_force = force_estimator(obs)
 
-        print(estimated_force)
+        #print(estimated_force)
 
         obs = torch.cat((obs[:, :-6], estimated_base_vel),dim=-1)
         obs = torch.cat((obs, estimated_force),dim=-1)

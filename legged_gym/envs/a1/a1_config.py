@@ -53,8 +53,8 @@ class GuideDogCfg( LeggedRobotCfg ):
     class env ( LeggedRobotCfg.env ):
 
         num_envs = 4096
-        num_observations = 117 #42
-        num_privileged_obs = 117 #42 #true lin_vel is used to update critic
+        num_observations = 120 #117 #42
+        num_privileged_obs = 120 #124 #117 #42 #true lin_vel is used to update critic
 
         min_base_height = 0.25
 
@@ -67,9 +67,9 @@ class GuideDogCfg( LeggedRobotCfg ):
 
         push_robots = True
         push_interval_s = 3 #15 #How often to push (lower means more frequent)
-        max_push_vel = 2.5 #1 #Max push velocity in xy directions
+        max_push_vel = 1.5 #1 #Max push velocity in xy directions
         max_z_vel = 0.5 #Max push velocity in z direction
-        push_length_interval = [1, 20]
+        push_length_interval = [1, 10]
 
         randomize_friction = True
 
@@ -97,6 +97,27 @@ class GuideDogCfg( LeggedRobotCfg ):
     class noise ( LeggedRobotCfg.noise ):
 
         add_noise = True
+
+        class noise_scales ( LeggedRobotCfg.noise.noise_scales ):
+            dof_pos = 0.01
+            dof_vel = 1.5
+            lin_vel = 0.1
+            ang_vel = 0.2
+            gravity = 0.05
+            base_acc = 0.1
+            base_orientation = 0.05
+            height_measurements = 0.1
+
+    class normalization ( LeggedRobotCfg.normalization ):
+        class obs_scales ( LeggedRobotCfg.normalization.obs_scales ):
+            lin_vel = 2.0
+            ang_vel = 0.25
+            dof_pos = 1.0
+            dof_vel = 0.05
+            base_acc = 0.25
+            height_measurements = 5.0
+        clip_observations = 100.
+        clip_actions = 100.
   
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9

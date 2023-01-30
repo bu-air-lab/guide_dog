@@ -51,9 +51,6 @@ for env_step in range(1000):
 
     #linear_vel, _ = p.getBaseVelocity(env.robot)
 
-
-    start_time = time.time()
-
     with torch.no_grad():
 
         action = policy(torch.Tensor(obs)).detach()
