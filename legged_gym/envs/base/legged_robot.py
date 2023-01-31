@@ -86,9 +86,9 @@ class LeggedRobot(BaseTask):
 
         #Store 3D external force vectors for past 5 timesteps in each environment
         #env ID x force vector x history
-        #self.external_force_history_length = 2
-        #self.external_force_vectors = torch.zeros(self.num_envs, 3, self.external_force_history_length, device=self.device, dtype=torch.float)
-        self.external_force_vectors = torch.zeros(self.num_envs, 3, device=self.device, dtype=torch.float)
+        self.external_force_history_length = 2
+        self.external_force_vectors = torch.zeros(self.num_envs, 3, self.external_force_history_length, device=self.device, dtype=torch.float)
+        #self.external_force_vectors = torch.zeros(self.num_envs, 3, device=self.device, dtype=torch.float)
 
         self.push_length = 0
 
@@ -285,7 +285,8 @@ class LeggedRobot(BaseTask):
                                     ),dim=-1)
 
         #Include ground truth base linear velocity for critic observation
-        self.privileged_obs_buf = torch.cat(( 
+        self.privileged_obs_buf = torch.cat((
+
                                     self.commands[:, :3] * self.commands_scale,
 
                                     #self.base_quat,
@@ -311,7 +312,7 @@ class LeggedRobot(BaseTask):
 
                                     self.actions,
                                     self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.external_force_vectors
+                                    self.external_force_vectors[:,:,-1] #Label current state with least recent force vector
                                     ),dim=-1)
         # add perceptive inputs if not blind
         # if self.cfg.terrain.measure_heights:
@@ -438,17 +439,17 @@ class LeggedRobot(BaseTask):
         elif self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval <= self.push_length):
 
             #Shift by 1 timestep. Most recent timestep is current push vector
-            #self.external_force_vectors = torch.roll(self.external_force_vectors, shifts=1, dims=2)
-            #self.external_force_vectors[:,:,0] = self.external_force_vectors[:,:,1]
+            self.external_force_vectors = torch.roll(self.external_force_vectors, shifts=1, dims=2)
+            self.external_force_vectors[:,:,0] = self.external_force_vectors[:,:,1]
 
             self._push_robots()
             #print(self.external_force_vectors)
         else:
 
             #Shift by 1 timestep. Most recent timestep is 0 vector
-            #self.external_force_vectors = torch.roll(self.external_force_vectors, shifts=1, dims=2)
-            #self.external_force_vectors[:,:,0] = 0
-            self.external_force_vectors[:] = 0
+            self.external_force_vectors = torch.roll(self.external_force_vectors, shifts=1, dims=2)
+            self.external_force_vectors[:,:,0] = 0
+            #self.external_force_vectors[:] = 0
             #print(self.external_force_vectors)
             
 
@@ -546,11 +547,11 @@ class LeggedRobot(BaseTask):
         z_push = torch_rand_float(0, self.cfg.domain_rand.max_z_vel, (self.num_envs, 1), device=self.device)
 
         #Save selected push for current timestep
-        #self.external_force_vectors[:, :2, 0] = xy_push
-        #self.external_force_vectors[:, 2, 0] = z_push[:,0]
+        self.external_force_vectors[:, :2, 0] = xy_push
+        self.external_force_vectors[:, 2, 0] = z_push[:,0]
 
-        self.external_force_vectors[:, :2] = xy_push
-        self.external_force_vectors[:, 2] = z_push[:,0]
+        #self.external_force_vectors[:, :2] = xy_push
+        #self.external_force_vectors[:, 2] = z_push[:,0]
 
         #Select push length (each env gets same push length)
         self.push_length = random.randint(self.cfg.domain_rand.push_length_interval[0], self.cfg.domain_rand.push_length_interval[1])
@@ -560,11 +561,11 @@ class LeggedRobot(BaseTask):
         """
         #print("PUSH:", self.external_force_vectors)
         #Apply push
-        #self.root_states[:, 7:9] = self.external_force_vectors[:, :2, 0]
-        #self.root_states[:, 9:10] = self.external_force_vectors[:, 2, 0].unsqueeze(1)
+        self.root_states[:, 7:9] = self.external_force_vectors[:, :2, 0]
+        self.root_states[:, 9:10] = self.external_force_vectors[:, 2, 0].unsqueeze(1)
 
-        self.root_states[:, 7:9] = self.external_force_vectors[:, :2]
-        self.root_states[:, 9:10] = self.external_force_vectors[:, 2].unsqueeze(1)
+        #self.root_states[:, 7:9] = self.external_force_vectors[:, :2]
+        #self.root_states[:, 9:10] = self.external_force_vectors[:, 2].unsqueeze(1)
 
         self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 

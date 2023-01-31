@@ -56,7 +56,7 @@ class GuideDogCfg( LeggedRobotCfg ):
         num_observations = 120 #117 #42
         num_privileged_obs = 120 #124 #117 #42 #true lin_vel is used to update critic
 
-        min_base_height = 0.25
+        min_base_height = 0.23
 
         isRAO = False
         rao_torque_range = [-5, 5]
@@ -68,8 +68,8 @@ class GuideDogCfg( LeggedRobotCfg ):
         push_robots = True
         push_interval_s = 3 #15 #How often to push (lower means more frequent)
         max_push_vel = 1.5 #1 #Max push velocity in xy directions
-        max_z_vel = 0.5 #Max push velocity in z direction
-        push_length_interval = [1, 10]
+        max_z_vel = 0.1 #Max push velocity in z direction
+        push_length_interval = [1, 3]
 
         randomize_friction = True
 
@@ -104,7 +104,7 @@ class GuideDogCfg( LeggedRobotCfg ):
             lin_vel = 0.1
             ang_vel = 0.2
             gravity = 0.05
-            base_acc = 0.1
+            base_acc = 0.2
             base_orientation = 0.05
             height_measurements = 0.1
 
@@ -141,5 +141,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "v20" # -1 = last run
-        checkpoint = 1500 # -1 = last saved model
+        load_run = "v22" # -1 = last run
+        checkpoint = 1000 # -1 = last saved model

@@ -22,9 +22,8 @@ class BulletEnv(gym.Env):
 
     def __init__(self, isGUI=False):
 
-        #For compatibility with rsl_rl
         self.num_privileged_obs = None
-        self.num_obs = 117 #186 #42
+        self.num_obs = 120
         self.num_envs = 1
         self.num_actions = 12
 
@@ -48,7 +47,6 @@ class BulletEnv(gym.Env):
         self.robot = p.loadURDF(self.urdf_path,[0,0,0.3])#, useFixedBase=1)
         p.setGravity(0,0,-9.8)
 
-        #self.time_step = 0.002
         self.time_step = 0.005
 
         p.setTimeStep(self.time_step)
@@ -111,6 +109,8 @@ class BulletEnv(gym.Env):
         for i in range(4):
             self.past_dof_pos.append(INIT_MOTOR_ANGLES)
             self.past_dof_vel.append([0 for x in range(12)])
+
+        self.last_base_vel = [0, 0, 0]
 
 
     def compute_torques(self, action):
@@ -234,8 +234,8 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 3000
-        if(self.current_timestep % 50 == 0 and self.current_timestep > 5):
+        applied_force = 750
+        if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
 
             print("APPLY FORCE")
 
@@ -243,7 +243,7 @@ class BulletEnv(gym.Env):
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push left
-            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, applied_force], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push back
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[-applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
@@ -254,7 +254,10 @@ class BulletEnv(gym.Env):
         command = [1.5, 0, 0]
         #command = [0.5, 0, 0.15]
 
-        #print([round(x,2) for x in angular_vel])
+        acceleration = [(linear_vel[i] - self.last_base_vel[i])/ (self.time_step*self.action_repeat) for i in range(3)]
+        self.last_base_vel = linear_vel
+
+        #print("Acc:", [round(x,2) for x in acceleration])
 
         state = []
         #state.extend([2*x for x in linear_vel]) #Base velocity
@@ -263,6 +266,8 @@ class BulletEnv(gym.Env):
 
         #state.extend(self.current_joint_angles - INIT_MOTOR_ANGLES) #Joint angles offset
         #state.extend([x*0.05 for x in self.current_joint_velocities])  #Joint velocities
+
+        state.extend([x*0.25 for x in acceleration])
 
         state.extend(self.past_dof_pos[0] - INIT_MOTOR_ANGLES)
         state.extend(self.past_dof_pos[1] - INIT_MOTOR_ANGLES)

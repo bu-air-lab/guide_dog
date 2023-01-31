@@ -25,7 +25,7 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
 #ppo_runner.load("/home/dave/Desktop/guide_dog/pybullet_val/saved_models/baseline.pt")
-ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v20.pt")
+ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v22.pt")
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
@@ -48,6 +48,7 @@ for env_step in range(1000):
     obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
     obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
 
+    print(estimated_force)
 
     #linear_vel, _ = p.getBaseVelocity(env.robot)
 
