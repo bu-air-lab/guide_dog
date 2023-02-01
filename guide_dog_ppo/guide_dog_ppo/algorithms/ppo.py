@@ -206,7 +206,7 @@ class PPO:
                 if(torch.count_nonzero(true_force).item() > 0):
 
                     #Ensure only some percentage of batch is 0 forces
-                    percentage_zero_samples = 0.2
+                    percentage_zero_samples = 0.4
                     num_nonzero_samples = int(torch.count_nonzero(true_force).item()/3)
                     num_total_samples = int(num_nonzero_samples/(1-percentage_zero_samples))
                     num_zero_samples =  num_total_samples - num_nonzero_samples

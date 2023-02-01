@@ -234,8 +234,9 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 750
-        if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
+        applied_force = 2550
+        #if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
+        if(self.current_timestep % 50 == 0 and self.current_timestep > 5):
 
             print("APPLY FORCE")
 
@@ -243,7 +244,7 @@ class BulletEnv(gym.Env):
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push left
-            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, applied_force], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push back
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[-applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
