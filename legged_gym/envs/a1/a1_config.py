@@ -53,8 +53,8 @@ class GuideDogCfg( LeggedRobotCfg ):
     class env ( LeggedRobotCfg.env ):
 
         num_envs = 4096
-        num_observations = 120 #117 #42
-        num_privileged_obs = 120 #124 #117 #42 #true lin_vel is used to update critic
+        num_observations = 120
+        num_privileged_obs = 120
 
         min_base_height = 0.23
 
@@ -104,7 +104,7 @@ class GuideDogCfg( LeggedRobotCfg ):
             lin_vel = 0.1
             ang_vel = 0.2
             gravity = 0.05
-            base_acc = 0.2
+            base_acc = 1.0
             base_orientation = 0.05
             height_measurements = 0.1
 
@@ -141,5 +141,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
     class runner( LeggedRobotCfgPPO.runner ):
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "v23" # -1 = last run
+        load_run = "v24" # -1 = last run
         checkpoint = 1000 # -1 = last saved model

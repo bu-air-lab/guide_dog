@@ -252,13 +252,19 @@ class LeggedRobot(BaseTask):
     def compute_observations(self):
         """ Computes observations
         """
-        #print("Acc:", (self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt,)
+
+        #Get yaw of robot in radians
+        #yaw = get_euler_xyz(self.base_quat)[2]#[:,2]
+        #print(yaw)
+
         self.obs_buf = torch.cat((  #self.base_lin_vel * self.obs_scales.lin_vel,
                                     #self.base_ang_vel  * self.obs_scales.ang_vel,
                                     #self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
+
                                     #self.base_quat,
                                     #self.base_ang_vel * self.obs_scales.ang_vel,
+
                                     ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
 
                                     #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
@@ -291,7 +297,9 @@ class LeggedRobot(BaseTask):
 
                                     #self.base_quat,
                                     #self.base_ang_vel * self.obs_scales.ang_vel,
+
                                     ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+
                                     #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #self.dof_vel * self.obs_scales.dof_vel,
                                     (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
