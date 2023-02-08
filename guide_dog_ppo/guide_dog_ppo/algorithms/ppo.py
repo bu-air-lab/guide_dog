@@ -257,25 +257,29 @@ class PPO:
         #At this point, self.storage.observations and self.storage.privileged_observations are already ordered.
         #most recent at bottom
 
+        #We want most recent observations at top
+        flipped_obs = torch.flip(self.storage.observations, [0])
+        flipped_privileged_obs = torch.flip(self.storage.privileged_observations, [0])
+
         #Only train if at least some external forces appear in the past set of observations
-        true_forces = self.storage.privileged_observations[:, :, -3:]
+        true_forces = flipped_privileged_obs[:, :, -3:]
 
         if(torch.count_nonzero(true_forces).item() > 0):
-            
+
             #Actor, Critic, and base velocity estimator also trained over 5 epochs
             for epoch in range(5):
 
                 #Can train over samples from [self.force_estimator.num_timesteps, self.storage.observations.shape[0]]
                 #self.storage.observations is num states x num envs x state size
-                num_training_samples = self.storage.observations.shape[0] - self.force_estimator.num_timesteps
-                training_idx = torch.randint(self.force_estimator.num_timesteps, self.storage.observations.shape[0], (num_training_samples,))
+                num_training_samples = flipped_obs.shape[0] - self.force_estimator.num_timesteps
+                training_idx = torch.randint(self.force_estimator.num_timesteps, flipped_obs.shape[0], (num_training_samples,))
 
                 avg_loss = 0
 
                 for idx in training_idx:
 
-                    training_samples = self.storage.observations[idx - self.force_estimator.num_timesteps: idx, :, :]
-                    training_sample_labels = self.storage.privileged_observations[idx-1, :, -3:]
+                    training_samples = flipped_obs[idx - self.force_estimator.num_timesteps: idx, :, :]
+                    training_sample_labels = flipped_privileged_obs[idx-1, :, -3:]
 
                     #Force estimator expects input as num environments x num states x num features
                     force_estimator_input = torch.transpose(training_samples, 0, 1)
