@@ -6,7 +6,7 @@ class BlankEnv(gym.Env):
     def __init__(self):
 
         self.num_privileged_obs = None
-        self.num_obs = 120
+        self.num_obs = 48 #120
         self.num_envs = 1
         self.num_actions = 12
 

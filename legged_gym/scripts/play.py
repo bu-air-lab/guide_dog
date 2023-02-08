@@ -42,7 +42,7 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 7)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
     env_cfg.env.isRAO = False
 
     env_cfg.terrain.num_rows = 5
@@ -51,17 +51,17 @@ def play(args):
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
 
-    env_cfg.domain_rand.push_robots = False
+    #env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
-    env_cfg.domain_rand.max_push_vel = 1.5 #1 #Max push velocity
-    env_cfg.domain_rand.push_length_interval = [1, 3]
+    env_cfg.domain_rand.max_push_vel = 0.75 #1 #Max push velocity
+    env_cfg.domain_rand.push_length_interval = [12, 24]
     env_cfg.domain_rand.max_z_vel = 0.1
 
     env_cfg.terrain.mesh_type = 'plane'
 
-    env_cfg.commands.ranges.lin_vel_x = [0.5, 0.5] # min max [m/s]
+    env_cfg.commands.ranges.lin_vel_x = [.5, .5] # min max [m/s]
     env_cfg.commands.ranges.lin_vel_y = [0, 0]   # min max [m/s]
-    env_cfg.commands.ranges.ang_vel_yaw = [0.25, 0.25]    # min max [rad/s]
+    env_cfg.commands.ranges.ang_vel_yaw = [0, 0]    # min max [rad/s]
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)

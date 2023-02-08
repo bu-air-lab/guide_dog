@@ -267,21 +267,21 @@ class LeggedRobot(BaseTask):
 
                                     ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
 
-                                    #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #self.dof_vel * self.obs_scales.dof_vel,
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.dof_vel * self.obs_scales.dof_vel,
 
-                                    (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    #(self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
 
-                                    self.past_dof_vel[0] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[1] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[2] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[3] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[0] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[1] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[2] * self.obs_scales.dof_vel,
+                                    #self.past_dof_vel[3] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[4] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[5] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[6] * self.obs_scales.dof_vel,
@@ -293,30 +293,33 @@ class LeggedRobot(BaseTask):
         #Include ground truth base linear velocity for critic observation
         self.privileged_obs_buf = torch.cat((
 
-                                    self.commands[:, :3] * self.commands_scale,
 
                                     #self.base_quat,
                                     #self.base_ang_vel * self.obs_scales.ang_vel,
 
-                                    ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
 
-                                    #(self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #self.dof_vel * self.obs_scales.dof_vel,
-                                    (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    # (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    # (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    # (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    # (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
                                     #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
 
-                                    self.past_dof_vel[0] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[1] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[2] * self.obs_scales.dof_vel,
-                                    self.past_dof_vel[3] * self.obs_scales.dof_vel,
+                                    # self.past_dof_vel[0] * self.obs_scales.dof_vel,
+                                    # self.past_dof_vel[1] * self.obs_scales.dof_vel,
+                                    # self.past_dof_vel[2] * self.obs_scales.dof_vel,
+                                    # self.past_dof_vel[3] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[4] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[5] * self.obs_scales.dof_vel,
                                     #self.past_dof_vel[6] * self.obs_scales.dof_vel,
+
+                                    self.commands[:, :3] * self.commands_scale,
+
+                                    ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+
+                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                    self.dof_vel * self.obs_scales.dof_vel,
 
                                     self.actions,
                                     self.base_lin_vel * self.obs_scales.lin_vel,
@@ -327,9 +330,12 @@ class LeggedRobot(BaseTask):
         #     heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
         #     self.obs_buf = torch.cat((self.obs_buf, heights), dim=-1)
         # add noise if needed
+        #print("Acc:", ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc)
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
             self.privileged_obs_buf += (2 * torch.rand_like(self.privileged_obs_buf) - 1) * self.noise_scale_vec
+
+            #print("Acc noise:", self.noise_scale_vec[3:6])
                 
     def create_sim(self):
         """ Creates simulation, terrain and evironments
@@ -475,7 +481,7 @@ class LeggedRobot(BaseTask):
             self.commands[env_ids, 2] = torch_rand_float(self.command_ranges["ang_vel_yaw"][0], self.command_ranges["ang_vel_yaw"][1], (len(env_ids), 1), device=self.device).squeeze(1)
 
         # set small commands to zero
-        self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.2).unsqueeze(1)
+        self.commands[env_ids, :2] *= (torch.norm(self.commands[env_ids, :2], dim=1) > 0.1).unsqueeze(1)
 
     def _compute_torques(self, actions):
         """ Compute torques from actions.
@@ -627,14 +633,11 @@ class LeggedRobot(BaseTask):
         noise_level = self.cfg.noise.noise_level
 
         noise_vec[:3] = 0. # commands
-        #noise_vec[3:7] = noise_scales.base_orientation * noise_level
-        #noise_vec[7:10] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
         noise_vec[3:6] = noise_scales.base_acc * noise_level * self.obs_scales.base_acc
 
-
-        noise_vec[6:54] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[54:102] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[102:] = 0. # previous actions and state estimation
+        noise_vec[6:18] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
+        noise_vec[18:30] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[30:] = 0. # previous actions and state estimation
 
         # noise_vec[:3] = 0. # commands
         # noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos

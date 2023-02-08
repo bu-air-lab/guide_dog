@@ -52,14 +52,23 @@ class GuideDogCfg( LeggedRobotCfg ):
 
     class env ( LeggedRobotCfg.env ):
 
-        num_envs = 4096
-        num_observations = 120
-        num_privileged_obs = 120
+        num_envs = 2048 #4096
+        num_observations = 48 #120
+        num_privileged_obs = 48 #120
 
-        min_base_height = 0.23
+        min_base_height = 0.25
 
         isRAO = False
         rao_torque_range = [-5, 5]
+
+
+    class commands:
+        class ranges:
+            lin_vel_x = [-1, 1] # min max [m/s]
+            lin_vel_y = [-1, 1]   # min max [m/s]
+            ang_vel_yaw = [-1, 1]    # min max [rad/s]
+            heading = [-3.14, 3.14]
+
 
     class domain_rand ( LeggedRobotCfg.domain_rand ):
 
@@ -67,9 +76,9 @@ class GuideDogCfg( LeggedRobotCfg ):
 
         push_robots = True
         push_interval_s = 3 #15 #How often to push (lower means more frequent)
-        max_push_vel = 1.5 #1 #Max push velocity in xy directions
+        max_push_vel = 0.75 #1 #Max push velocity in xy directions
         max_z_vel = 0.1 #Max push velocity in z direction
-        push_length_interval = [1, 3]
+        push_length_interval = [12, 24]
 
         randomize_friction = True
 
@@ -122,6 +131,8 @@ class GuideDogCfg( LeggedRobotCfg ):
     class rewards( LeggedRobotCfg.rewards ):
         soft_dof_pos_limit = 0.9
         base_height_target = 0.25
+        tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
+
         class scales( LeggedRobotCfg.rewards.scales ):
             torques = -0.0002
             dof_pos_limits = -10.0
@@ -139,7 +150,11 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
     class runner( LeggedRobotCfgPPO.runner ):
+
+        force_estimation_timesteps = 25
+        num_steps_per_env = 48 #24 # per iteration
+
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "v24" # -1 = last run
-        checkpoint = 1000 # -1 = last saved model
+        load_run = "v28" # -1 = last run
+        checkpoint = 1500 # -1 = last saved model

@@ -30,7 +30,7 @@ class OnPolicyRunner:
             num_critic_obs = self.env.num_obs
 
         base_velocity_estimator = BaseVelocityEstimator(self.env.num_obs).to(self.device)
-        force_estimator = ForceEstimator(self.env.num_obs).to(self.device)
+        force_estimator = ForceEstimator(self.env.num_obs, self.cfg['force_estimation_timesteps']).to(self.device)
 
         actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCritic
         actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
