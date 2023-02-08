@@ -234,7 +234,7 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 1000
+        applied_force = 2000
         #if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
         if(self.current_timestep % 50 == 0 and self.current_timestep > 5):
 
@@ -258,7 +258,7 @@ class BulletEnv(gym.Env):
         acceleration = [(linear_vel[i] - self.last_base_vel[i])/ (self.time_step*self.action_repeat) for i in range(3)]
         self.last_base_vel = linear_vel
 
-        print("Acc:", [round(x,2) for x in acceleration])
+        #print("Acc:", [round(x,2) for x in acceleration])
 
         state = []
         #state.extend([2*x for x in linear_vel]) #Base velocity

@@ -21,28 +21,38 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'init_member_classes': {}, 
                                 'policy': {'activation': 'elu', 'actor_hidden_dims': [512, 256, 128], 'critic_hidden_dims': [512, 256, 128], 'init_noise_std': 1.0}, 
                                 'runner': {'algorithm_class_name': 'PPO', 'checkpoint': -1, 'experiment_name': 'flat_a1', 'load_run': -1, 'max_iterations': 500, 
-                                'num_steps_per_env': 24, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
+                                'num_steps_per_env': 24, 'force_estimation_timesteps': 25, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
 #ppo_runner.load("/home/dave/Desktop/guide_dog/pybullet_val/saved_models/baseline.pt")
-ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v28.pt")
+ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v29.pt")
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
 obs,_ = env.reset()
 
+#Store past observations, most recent at top
+#env x num states x obs length
+obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
 
+for env_step in range(100):
 
-for env_step in range(1000):
+    #Shift all rows down 1 row (1 timestep)
+    obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
 
     obs = torch.Tensor(obs)
+
+    #Set most recent state as first
+    obs_history[:,0,:] = obs
+
+    #print(obs_history[:,0:3,3:40])
 
 
     with torch.no_grad():
 
         #Update obs with estimated base_vel (replace features at the end of obs)
         estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
-        estimated_force = force_estimator(obs.unsqueeze(0))
+        estimated_force = force_estimator(obs_history)
 
 
     obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
@@ -54,6 +64,6 @@ for env_step in range(1000):
 
     with torch.no_grad():
 
-        action = policy(torch.Tensor(obs)).detach()
+        action = policy(obs).detach()
 
     obs, rew, done, info = env.step(action.detach())

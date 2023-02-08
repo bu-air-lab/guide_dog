@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from torch.utils.data import DataLoader, TensorDataset
+
 from guide_dog_ppo.modules import ActorCritic
 from guide_dog_ppo.storage import RolloutStorage
 
@@ -264,29 +266,83 @@ class PPO:
         #Only train if at least some external forces appear in the past set of observations
         true_forces = flipped_privileged_obs[:, :, -3:]
 
+        percent_zero_samples = 0.2
+        num_states = self.force_estimator.num_timesteps
+
         if(torch.count_nonzero(true_forces).item() > 0):
 
             #Actor, Critic, and base velocity estimator also trained over 5 epochs
             for epoch in range(5):
 
+
                 #Can train over samples from [self.force_estimator.num_timesteps, self.storage.observations.shape[0]]
+                #This ensures each sample can go back far enough in history
                 #self.storage.observations is num states x num envs x state size
-                num_training_samples = flipped_obs.shape[0] - self.force_estimator.num_timesteps
-                training_idx = torch.randint(self.force_estimator.num_timesteps, flipped_obs.shape[0], (num_training_samples,))
+                num_training_samples = flipped_obs.shape[0] - num_states
+
+                #Select random permutation of state indicies to train over
+                training_idx = torch.randperm(num_training_samples) + num_states
+
+                #Among all training indicies, ensure at most percent_zero_samples have 0 labels
+                true_forces = flipped_privileged_obs[training_idx, :, -3:]
+
+                num_nonzero_samples = int(torch.count_nonzero(true_forces).item()/3)
+                num_total_samples = int(num_nonzero_samples/(1-percent_zero_samples))
+                num_zero_samples =  num_total_samples - num_nonzero_samples
+
+
+                #Tensor of state x env indicies of zero samples
+                zero_force_indicies = (true_forces[:,:,0] == 0).nonzero()
+                #print("Total zero samples:", zero_force_indicies.shape[0])
+
+                #Select num_zero_samples number of indicies with 0 forces
+                #Still tensor of state x env indicies
+                selected_zero_force_indicies = zero_force_indicies[:num_zero_samples]
+                #print("Training over", selected_zero_force_indicies.shape[0], "zero samples")
+
+                #Select all indicies including non-zero forces
+                #Tensor of state x env indicies
+                selected_non_zero_force_indicies = (true_forces[:,:,0] != 0).nonzero()
+                rebalanced_training_indicies = torch.cat(( selected_zero_force_indicies, selected_non_zero_force_indicies),dim=0)
+
+
+                #Gather training dataset.
+                #Each X sample contains self.force_estimator.num_timesteps number of states
+                    # num samples x num states x state length
+                #Each Y sample contains a single label
+
+                state_indicies = training_idx[rebalanced_training_indicies[:,0]]
+                env_indicies = rebalanced_training_indicies[:,1]
+
+                #We expect X to have shape num samples(46080) x num_states(25) x num features (48)
+                #num samples is so large, because each env can have up to 48-25 = 23 usable samples
+
+                X = torch.zeros(state_indicies.shape[0], num_states, flipped_obs.shape[2], device=self.device)
+
+                #We expect Y to have shape num samples(46080) x label(3)
+                Y = torch.zeros(state_indicies.shape[0], 3, device=self.device)
+
+                #Iterative solution. This is inneficient, but I can't figure out how to do this without a loop
+                for i in range(rebalanced_training_indicies.shape[0]):
+
+                    sample = flipped_obs[state_indicies[i]-num_states:state_indicies[i], env_indicies[i], :]
+                    X[i] = sample
+
+                    label = flipped_privileged_obs[state_indicies[i], env_indicies[i], -3:]
+                    Y[i] = label
+
+
+                train_dataset = TensorDataset(X, Y)
+                train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
                 avg_loss = 0
 
-                for idx in training_idx:
+                #train over batches from rebalanced training data
+                for data, label in train_dataloader:
 
-                    training_samples = flipped_obs[idx - self.force_estimator.num_timesteps: idx, :, :]
-                    training_sample_labels = flipped_privileged_obs[idx-1, :, -3:]
+                    predicted_force = self.force_estimator(data)
 
-                    #Force estimator expects input as num environments x num states x num features
-                    force_estimator_input = torch.transpose(training_samples, 0, 1)
-
-                    predicted_force = self.force_estimator(force_estimator_input)
-
-                    force_estimator_computed_loss = self.force_estimator_loss(predicted_force, training_sample_labels)
+                    force_estimator_computed_loss = self.force_estimator_loss(predicted_force, label)
 
                     self.force_estimator_optimizer.zero_grad()
                     force_estimator_computed_loss.backward()
