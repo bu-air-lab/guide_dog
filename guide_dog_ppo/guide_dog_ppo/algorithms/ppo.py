@@ -332,25 +332,28 @@ class PPO:
                     Y[i] = label
 
 
-                train_dataset = TensorDataset(X, Y)
-                train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+                #Its possible X can have 0 samples, when earlier states are the only ones with nonzero forces
+                if(X.shape[0] > 0):
+                    
+                    train_dataset = TensorDataset(X, Y)
+                    train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-                avg_loss = 0
+                    avg_loss = 0
 
-                #train over batches from rebalanced training data
-                for data, label in train_dataloader:
+                    #train over batches from rebalanced training data
+                    for data, label in train_dataloader:
 
-                    predicted_force = self.force_estimator(data)
+                        predicted_force = self.force_estimator(data)
 
-                    force_estimator_computed_loss = self.force_estimator_loss(predicted_force, label)
+                        force_estimator_computed_loss = self.force_estimator_loss(predicted_force, label)
 
-                    self.force_estimator_optimizer.zero_grad()
-                    force_estimator_computed_loss.backward()
-                    self.force_estimator_optimizer.step()
+                        self.force_estimator_optimizer.zero_grad()
+                        force_estimator_computed_loss.backward()
+                        self.force_estimator_optimizer.step()
 
-                    avg_loss += force_estimator_computed_loss.item()
+                        avg_loss += force_estimator_computed_loss.item()
 
-                print("Force Estimator Loss:", avg_loss/training_idx.shape[0])
+                    print("Force Estimator Loss:", avg_loss/training_idx.shape[0])
 
 
         num_updates = self.num_learning_epochs * self.num_mini_batches
