@@ -77,14 +77,14 @@ class LeggedRobot(BaseTask):
         self._prepare_reward_function()
 
         #Store past N timesteps of joint positions and velocities to include in state
-        self.past_dof_pos = []
-        self.past_dof_vel = []
+        # self.past_dof_pos = []
+        # self.past_dof_vel = []
 
-        for i in range(4):
-            self.past_dof_pos.append(self.default_dof_pos[0].repeat(self.num_envs, 1))
-            self.past_dof_vel.append(torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float))
+        # for i in range(4):
+        #     self.past_dof_pos.append(self.default_dof_pos[0].repeat(self.num_envs, 1))
+        #     self.past_dof_vel.append(torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float))
 
-        #Store 3D external force vectors for past 5 timesteps in each environment
+        #Store 3D external force vectors for past external_force_history_length timesteps in each environment
         #env ID x force vector x history
         self.external_force_history_length = 2
         self.external_force_vectors = torch.zeros(self.num_envs, 3, self.external_force_history_length, device=self.device, dtype=torch.float)
@@ -147,11 +147,11 @@ class LeggedRobot(BaseTask):
         self.reset_idx(env_ids)
 
         #Update joint angles and joint velocities history
-        self.past_dof_pos.pop()
-        self.past_dof_pos.insert(0, self.dof_pos.clone())
+        # self.past_dof_pos.pop()
+        # self.past_dof_pos.insert(0, self.dof_pos.clone())
 
-        self.past_dof_vel.pop()
-        self.past_dof_vel.insert(0, self.dof_vel.clone())
+        # self.past_dof_vel.pop()
+        # self.past_dof_vel.insert(0, self.dof_vel.clone())
 
         self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
 
@@ -225,10 +225,10 @@ class LeggedRobot(BaseTask):
         #Reset joint angle and velocity histories
         #This is probably innefficient :(
 
-        for i in range(4):
-            for _id in env_ids:
-                self.past_dof_pos[i][_id] = self.default_dof_pos[0]
-                self.past_dof_vel[i][_id] = torch.zeros(1, 12, device=self.device, dtype=torch.float)
+        # for i in range(4):
+        #     for _id in env_ids:
+        #         self.past_dof_pos[i][_id] = self.default_dof_pos[0]
+        #         self.past_dof_vel[i][_id] = torch.zeros(1, 12, device=self.device, dtype=torch.float)
     
     def compute_reward(self):
         """ Compute rewards
@@ -448,7 +448,7 @@ class LeggedRobot(BaseTask):
         if self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval == 0):
             self._select_push_parameters()
             self._push_robots()
-            #print(self.external_force_vectors)
+
         #Keep applying push of the same selected direction
         elif self.cfg.domain_rand.push_robots and  (self.common_step_counter % self.cfg.domain_rand.push_interval <= self.push_length):
 
@@ -457,14 +457,12 @@ class LeggedRobot(BaseTask):
             self.external_force_vectors[:,:,0] = self.external_force_vectors[:,:,1]
 
             self._push_robots()
-            #print(self.external_force_vectors)
         else:
 
             #Shift by 1 timestep. Most recent timestep is 0 vector
             self.external_force_vectors = torch.roll(self.external_force_vectors, shifts=1, dims=2)
             self.external_force_vectors[:,:,0] = 0
             #self.external_force_vectors[:] = 0
-            #print(self.external_force_vectors)
             
 
     def _resample_commands(self, env_ids):
@@ -561,11 +559,11 @@ class LeggedRobot(BaseTask):
         z_push = torch_rand_float(0, self.cfg.domain_rand.max_z_vel, (self.num_envs, 1), device=self.device)
 
         #Save selected push for current timestep
-        self.external_force_vectors[:, :2, 0] = xy_push
-        self.external_force_vectors[:, 2, 0] = z_push[:,0]
-
         #self.external_force_vectors[:, :2] = xy_push
         #self.external_force_vectors[:, 2] = z_push[:,0]
+
+        self.external_force_vectors[:, :2, 0] = xy_push
+        self.external_force_vectors[:, 2, 0] = z_push[:,0]
 
         #Select push length (each env gets same push length)
         self.push_length = random.randint(self.cfg.domain_rand.push_length_interval[0], self.cfg.domain_rand.push_length_interval[1])
@@ -573,7 +571,7 @@ class LeggedRobot(BaseTask):
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
         """
-        #print("PUSH:", self.external_force_vectors)
+
         #Apply push
         self.root_states[:, 7:9] = self.external_force_vectors[:, :2, 0]
         self.root_states[:, 9:10] = self.external_force_vectors[:, 2, 0].unsqueeze(1)
@@ -634,7 +632,6 @@ class LeggedRobot(BaseTask):
 
         noise_vec[:3] = 0. # commands
         noise_vec[3:6] = noise_scales.base_acc * noise_level * self.obs_scales.base_acc
-
         noise_vec[6:18] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
         noise_vec[18:30] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
         noise_vec[30:] = 0. # previous actions and state estimation
@@ -642,7 +639,7 @@ class LeggedRobot(BaseTask):
         # noise_vec[:3] = 0. # commands
         # noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
         # noise_vec[15:27] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        # noise_vec[27:30] = 0. # previous actions
+        # noise_vec[27:] = 0. # previous actions
 
         # noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
         # noise_vec[3:6] = 0. # commands

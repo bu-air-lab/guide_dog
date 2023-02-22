@@ -24,8 +24,10 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'num_steps_per_env': 24, 'force_estimation_timesteps': 25, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
-#ppo_runner.load("/home/dave/Desktop/guide_dog/pybullet_val/saved_models/baseline.pt")
+
 ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/v29.pt")
+
+#v32_x all good
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
@@ -35,7 +37,7 @@ obs,_ = env.reset()
 #env x num states x obs length
 obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
 
-for env_step in range(100):
+for env_step in range(1000):
 
     #Shift all rows down 1 row (1 timestep)
     obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
@@ -51,19 +53,41 @@ for env_step in range(100):
     with torch.no_grad():
 
         #Update obs with estimated base_vel (replace features at the end of obs)
+        #start_time = time.time()
         estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
+        #print("Vel estimation:", (time.time() - start_time))
+
+        #start_time = time.time()
         estimated_force = force_estimator(obs_history)
+        #print("force estimation:", (time.time() - start_time))
 
 
     obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
     obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
 
-    print(estimated_force)
+    #0.0285, -0.0095,
+    #print(estimated_force[0][:2])
+
+    #Subtract de-scaled velocity command from estimated force
+    #vel_command = obs[:3]
+    #estimated_force_vector = [estimated_force[0][i] + vel_command[i]/2 for i in range(2)]
+
+    #Add Bias to center force estimates around 0 on no forces
+    #X: -0.02 -> -0.1
+    #Y: 0.01 -> -0.14
+    #bias = [0.07, 0.06]
+    bias = [-0.47, 0.05]
+    #estimated_force_vector = [round((estimated_force_vector[i] + bias[i]).item(),2) for i in range(2)]
+    estimated_force_vector = [round((estimated_force[0][i] + bias[i]).item(),2) for i in range(2)]
+
+    print("Estimated Force Vector:", estimated_force_vector)
 
     #linear_vel, _ = p.getBaseVelocity(env.robot)
 
     with torch.no_grad():
 
+        #start_time = time.time()
         action = policy(obs).detach()
+        #print("Policy Query:", (time.time() - start_time))
 
     obs, rew, done, info = env.step(action.detach())

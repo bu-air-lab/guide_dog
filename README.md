@@ -22,7 +22,7 @@ pip3 install -e .
 Run the following:
 
 ```
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=<any name here> --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=<any name here> --seed=<seed here> --headless
 ```
 
 ## Testing
