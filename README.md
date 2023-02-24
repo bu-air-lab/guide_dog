@@ -21,4 +21,4 @@ Then, run
 
 To compare force data:
 Run
-```/guide_dog/pybullet_val$ python check_force_data.py
+```/guide_dog/pybullet_val$ python check_force_data.py```
