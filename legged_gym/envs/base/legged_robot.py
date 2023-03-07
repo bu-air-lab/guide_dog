@@ -69,20 +69,13 @@ class LeggedRobot(BaseTask):
         self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
+
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
 
         if not self.headless:
             self.set_camera(self.cfg.viewer.pos, self.cfg.viewer.lookat)
         self._init_buffers()
         self._prepare_reward_function()
-
-        #Store past N timesteps of joint positions and velocities to include in state
-        # self.past_dof_pos = []
-        # self.past_dof_vel = []
-
-        # for i in range(4):
-        #     self.past_dof_pos.append(self.default_dof_pos[0].repeat(self.num_envs, 1))
-        #     self.past_dof_vel.append(torch.zeros(self.num_envs, 12, device=self.device, dtype=torch.float))
 
         #Store 3D external force vectors for past external_force_history_length timesteps in each environment
         #env ID x force vector x history
@@ -145,13 +138,6 @@ class LeggedRobot(BaseTask):
         self.compute_reward()
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
-
-        #Update joint angles and joint velocities history
-        # self.past_dof_pos.pop()
-        # self.past_dof_pos.insert(0, self.dof_pos.clone())
-
-        # self.past_dof_vel.pop()
-        # self.past_dof_vel.insert(0, self.dof_vel.clone())
 
         self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
 
@@ -222,13 +208,6 @@ class LeggedRobot(BaseTask):
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
 
-        #Reset joint angle and velocity histories
-        #This is probably innefficient :(
-
-        # for i in range(4):
-        #     for _id in env_ids:
-        #         self.past_dof_pos[i][_id] = self.default_dof_pos[0]
-        #         self.past_dof_vel[i][_id] = torch.zeros(1, 12, device=self.device, dtype=torch.float)
     
     def compute_reward(self):
         """ Compute rewards
@@ -253,78 +232,47 @@ class LeggedRobot(BaseTask):
         """ Computes observations
         """
 
-        #Get yaw of robot in radians
-        #yaw = get_euler_xyz(self.base_quat)[2]#[:,2]
-        #print(yaw)
+        if(self.cfg.env.use_force_estimator):
 
-        self.obs_buf = torch.cat((  #self.base_lin_vel * self.obs_scales.lin_vel,
-                                    #self.base_ang_vel  * self.obs_scales.ang_vel,
-                                    #self.projected_gravity,
-                                    self.commands[:, :3] * self.commands_scale,
+            self.obs_buf = torch.cat((  
+                                        self.commands[:, :3] * self.commands_scale,
+                                        ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+                                        (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                        self.dof_vel * self.obs_scales.dof_vel,
+                                        self.actions,
+                                        torch.zeros(self.num_envs, 6, device=self.device, dtype=torch.float) #placeholder for estimated base_lin_vel
+                                        ),dim=-1)
 
-                                    #self.base_quat,
-                                    #self.base_ang_vel * self.obs_scales.ang_vel,
+            self.privileged_obs_buf = torch.cat((
+                                        self.commands[:, :3] * self.commands_scale,
+                                        ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+                                        (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                        self.dof_vel * self.obs_scales.dof_vel,
+                                        self.actions,
+                                        self.base_lin_vel * self.obs_scales.lin_vel,
+                                        self.external_force_vectors[:,:,-1] #Label current state with least recent force vector
+                                        ),dim=-1)
 
-                                    ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+        else:
 
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
+            self.obs_buf = torch.cat((  
+                                        self.commands[:, :3] * self.commands_scale,
+                                        ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+                                        (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                        self.dof_vel * self.obs_scales.dof_vel,
+                                        self.actions,
+                                        torch.zeros(self.num_envs, 3, device=self.device, dtype=torch.float) #placeholder for estimated base_lin_vel
+                                        ),dim=-1)
 
-                                    #(self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
+            self.privileged_obs_buf = torch.cat((
+                                        self.commands[:, :3] * self.commands_scale,
+                                        ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
+                                        (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                                        self.dof_vel * self.obs_scales.dof_vel,
+                                        self.actions,
+                                        self.base_lin_vel * self.obs_scales.lin_vel,
+                                        ),dim=-1)
 
-                                    #self.past_dof_vel[0] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[1] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[2] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[3] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[4] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[5] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[6] * self.obs_scales.dof_vel,
-
-                                    self.actions,
-                                    torch.zeros(self.num_envs, 6, device=self.device, dtype=torch.float) #placeholder for estimated base_lin_vel
-                                    ),dim=-1)
-
-        #Include ground truth base linear velocity for critic observation
-        self.privileged_obs_buf = torch.cat((
-
-
-                                    #self.base_quat,
-                                    #self.base_ang_vel * self.obs_scales.ang_vel,
-
-
-                                    # (self.past_dof_pos[0] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    # (self.past_dof_pos[1] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    # (self.past_dof_pos[2] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    # (self.past_dof_pos[3] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[4] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[5] - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    #(self.past_dof_pos[6] - self.default_dof_pos) * self.obs_scales.dof_pos,
-
-                                    # self.past_dof_vel[0] * self.obs_scales.dof_vel,
-                                    # self.past_dof_vel[1] * self.obs_scales.dof_vel,
-                                    # self.past_dof_vel[2] * self.obs_scales.dof_vel,
-                                    # self.past_dof_vel[3] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[4] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[5] * self.obs_scales.dof_vel,
-                                    #self.past_dof_vel[6] * self.obs_scales.dof_vel,
-
-                                    self.commands[:, :3] * self.commands_scale,
-
-                                    ((self.base_lin_vel - self.last_root_vel[:,0:3])/self.dt)*self.obs_scales.base_acc,
-
-                                    (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
-                                    self.dof_vel * self.obs_scales.dof_vel,
-
-                                    self.actions,
-                                    self.base_lin_vel * self.obs_scales.lin_vel,
-                                    self.external_force_vectors[:,:,-1] #Label current state with least recent force vector
-                                    ),dim=-1)
         # add perceptive inputs if not blind
         # if self.cfg.terrain.measure_heights:
         #     heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
@@ -802,6 +750,14 @@ class LeggedRobot(BaseTask):
                 2.3 create actor with these properties and add them to the env
              3. Store indices of different bodies of the robot
         """
+
+        # asset_options = self.gym.AssetOptions()
+        # asset_options.density = 10.0
+
+        # box_asset = self.gym.create_box(self.sim, 10, 50, 5, asset_options)
+
+
+
         asset_path = self.cfg.asset.file.format(LEGGED_GYM_ROOT_DIR=LEGGED_GYM_ROOT_DIR)
         asset_root = os.path.dirname(asset_path)
         asset_file = os.path.basename(asset_path)

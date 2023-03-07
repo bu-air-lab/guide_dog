@@ -24,6 +24,7 @@ class OnPolicyRunner:
         self.policy_cfg = train_cfg["policy"]
         self.device = device
         self.env = env
+
         if self.env.num_privileged_obs is not None:
             num_critic_obs = self.env.num_privileged_obs 
         else:
@@ -39,7 +40,13 @@ class OnPolicyRunner:
                                                         **self.policy_cfg).to(self.device)
 
         alg_class = eval(self.cfg["algorithm_class_name"]) # PPO
-        self.alg: PPO = alg_class(actor_critic, base_velocity_estimator, force_estimator, device=self.device, **self.alg_cfg)
+        self.alg: PPO = alg_class(actor_critic, 
+                                    base_velocity_estimator, 
+                                    force_estimator, 
+                                    isForceEstimator=self.env.cfg.env.use_force_estimator, 
+                                    device=self.device, 
+                                    **self.alg_cfg)
+
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
 

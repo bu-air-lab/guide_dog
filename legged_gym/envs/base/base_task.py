@@ -38,6 +38,7 @@ import torch
 class BaseTask():
 
     def __init__(self, cfg, sim_params, physics_engine, sim_device, headless):
+
         self.gym = gymapi.acquire_gym()
 
         self.sim_params = sim_params
@@ -60,6 +61,12 @@ class BaseTask():
         self.num_envs = cfg.env.num_envs
         self.num_obs = cfg.env.num_observations
         self.num_privileged_obs = cfg.env.num_privileged_obs
+        self.use_force_estimator = cfg.env.use_force_estimator
+
+        if(not self.use_force_estimator):
+            self.num_obs -= 3
+            self.num_privileged_obs -= 3
+            
         self.num_actions = cfg.env.num_actions
 
         # optimization flags for pytorch JIT
