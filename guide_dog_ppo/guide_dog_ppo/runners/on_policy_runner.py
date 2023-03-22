@@ -40,7 +40,16 @@ class OnPolicyRunner:
                                                         **self.policy_cfg).to(self.device)
 
         alg_class = eval(self.cfg["algorithm_class_name"]) # PPO
-        self.alg: PPO = alg_class(actor_critic, 
+
+        if hasattr(self.env, 'isBlankEnv'):
+            self.alg: PPO = alg_class(actor_critic, 
+                                    base_velocity_estimator, 
+                                    force_estimator, 
+                                    isForceEstimator=self.env.use_force_estimator, 
+                                    device=self.device, 
+                                    **self.alg_cfg)
+        else:
+            self.alg: PPO = alg_class(actor_critic, 
                                     base_velocity_estimator, 
                                     force_estimator, 
                                     isForceEstimator=self.env.cfg.env.use_force_estimator, 

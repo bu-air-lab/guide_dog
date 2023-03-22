@@ -36,8 +36,8 @@ from mpc_controller import a1_sim as robot_sim
 
 import time
 
-from bullet_env.bullet_env import BulletEnv
-from bullet_env.blank_env import BlankEnv
+from pybullet_val.bullet_env.eval_robustness_env import EvalRobustnessEnv
+from pybullet_val.bullet_env.blank_env import BlankEnv
 
 from guide_dog_ppo.runners import OnPolicyRunner
 
@@ -45,8 +45,6 @@ import numpy as np
 import torch
 
 import pybullet as p
-
-#import pandas as pd
 
 #Load Policy
 train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_coef': 0.01, 'gamma': 0.99, 'lam': 0.95, 'learning_rate': 0.001, 
@@ -57,7 +55,7 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'runner': {'algorithm_class_name': 'PPO', 'checkpoint': -1, 'experiment_name': 'flat_a1', 'load_run': -1, 'max_iterations': 500, 
                                 'num_steps_per_env': 24, 'force_estimation_timesteps': 25, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
-ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
+ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=True), train_cfg_dict)
 ppo_runner.load("/home/david/Desktop/eval_controller/guide_dog/pybullet_val/saved_models/v29.pt")
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
@@ -137,15 +135,6 @@ def is_healthy(robot_id, plane_id, p):
   if(euler_orientation[0] > 0.4 or euler_orientation[1] > 0.2):
       isBalanced = False
 
-  #Check if anything except feet are in contact with ground
-  # isContact = False
-  # contact_points = p.getContactPoints(robot_id, plane_id)
-  # links = []
-  # for point in contact_points:
-  #   robot_link = point[3]
-  #   if(robot_link not in [5, 10, 15, 20]):
-  #     isContact = True
-
   #Check if robot is high in air
   isTooHigh = False
   if(position[2] > 0.35):
@@ -164,8 +153,8 @@ MPC_TARGET = (2.327454017235708, 0.060377823538094545)
 
 def _run_mpc(force_vector, force_duration, force_start):
 
-  #p = bullet_client.BulletClient(connection_mode=pybullet.GUI)    
-  p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
+  p = bullet_client.BulletClient(connection_mode=pybullet.GUI)    
+  #p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
 
   simulation_time_step = 0.001
   p.setTimeStep(simulation_time_step)
@@ -220,8 +209,8 @@ def _run_learned(force_vector, force_duration, force_start):
 
 
   obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
-  #env = BulletEnv(isGUI=True)
-  env = BulletEnv(isGUI=False)
+  env = EvalRobustnessEnv(isGUI=True)
+  #env = EvalRobustnessEnv(isGUI=False)
   obs,_ = env.reset()
 
   isHealthy = True
