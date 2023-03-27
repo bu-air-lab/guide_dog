@@ -20,7 +20,7 @@ INIT_MOTOR_ANGLES = np.array([0.1, 0.8, -1.5, -0.1, 0.8, -1.5, 0.1, 1.0, -1.5, -
 #Torque Control
 class BulletEnv(gym.Env):
 
-    def __init__(self, isGUI=False):
+    def __init__(self, isGUI=False, isForceDetector=True):
 
         self.num_privileged_obs = None
         self.num_obs = 120
@@ -28,6 +28,7 @@ class BulletEnv(gym.Env):
         self.num_actions = 12
 
         self.isGUI = isGUI
+        self.isForceDetector = isForceDetector
 
         self._cam_dist = 1.0
         self._cam_yaw = 0
@@ -234,28 +235,25 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 000
+        applied_force = 2000
         #if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
-        if(self.current_timestep % 50 == 0 and self.current_timestep > 5):
+        if(self.current_timestep % 100 == 0 and self.current_timestep > 5):
 
             print("APPLY FORCE")
-
-            #Right and forward
-            #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[applied_force, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push right
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, -applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push left
-            #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[0, applied_force, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push back
             #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[-applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
             #Push forward
-            p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
+            #p.applyExternalForce(objectUniqueId=self.robot, linkIndex=-1, forceObj=[applied_force, 0, 0], posObj=[0, 0, 0], flags=p.LINK_FRAME)
 
-        command = [1.5, 0, 0]
+        command = [2, 0, 0]
         #command = [0.2, 0, -0.4]
 
         acceleration = [(linear_vel[i] - self.last_base_vel[i])/ (self.time_step*self.action_repeat) for i in range(3)]
@@ -267,31 +265,14 @@ class BulletEnv(gym.Env):
         #state.extend([2*x for x in linear_vel]) #Base velocity
         #state.extend([0.25*x for x in angular_vel]) #Angular Velocity
         state.extend(command) #Commands scale is (2, 2, 0.25). Command is [1, 0, 0]
-
         state.extend([x*0.25 for x in acceleration])
-
         state.extend(self.current_joint_angles - INIT_MOTOR_ANGLES) #Joint angles offset
         state.extend([x*0.05 for x in self.current_joint_velocities])  #Joint velocities
-
-
-        # state.extend(self.past_dof_pos[0] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[1] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[2] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[3] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[4] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[5] - INIT_MOTOR_ANGLES)
-        # state.extend(self.past_dof_pos[6] - INIT_MOTOR_ANGLES)
-
-        # state.extend([x*0.05 for x in self.past_dof_vel[0]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[1]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[2]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[3]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[4]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[5]])
-        # state.extend([x*0.05 for x in self.past_dof_vel[6]])
-
         state.extend(action.tolist())
-        state.extend([0,0,0,0,0,0])
+        if(self.isForceDetector):
+            state.extend([0,0,0,0,0,0])
+        else:
+            state.extend([0,0,0])
 
         return state    
 
