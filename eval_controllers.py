@@ -46,20 +46,6 @@ import torch
 
 import pybullet as p
 
-#Load Policy
-train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_coef': 0.01, 'gamma': 0.99, 'lam': 0.95, 'learning_rate': 0.001, 
-                                'max_grad_norm': 1.0, 'num_learning_epochs': 5, 'num_mini_batches': 4, 'schedule': 'adaptive', 
-                                'use_clipped_value_loss': True, 'value_loss_coef': 1.0}, 
-                                'init_member_classes': {}, 
-                                'policy': {'activation': 'elu', 'actor_hidden_dims': [512, 256, 128], 'critic_hidden_dims': [512, 256, 128], 'init_noise_std': 1.0}, 
-                                'runner': {'algorithm_class_name': 'PPO', 'checkpoint': -1, 'experiment_name': 'flat_a1', 'load_run': -1, 'max_iterations': 500, 
-                                'num_steps_per_env': 24, 'force_estimation_timesteps': 25, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
-                                'runner_class_name': 'OnPolicyRunner', 'seed': 1}
-ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=True), train_cfg_dict)
-ppo_runner.load("/home/david/Desktop/eval_controller/guide_dog/pybullet_val/saved_models/v29.pt")
-policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
-
-
 
 _STANCE_DURATION_SECONDS = [
     0.15
@@ -153,8 +139,8 @@ MPC_TARGET = (2.327454017235708, 0.060377823538094545)
 
 def _run_mpc(force_vector, force_duration, force_start):
 
-  p = bullet_client.BulletClient(connection_mode=pybullet.GUI)    
-  #p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
+  #p = bullet_client.BulletClient(connection_mode=pybullet.GUI)    
+  p = bullet_client.BulletClient(connection_mode=pybullet.DIRECT)
 
   simulation_time_step = 0.001
   p.setTimeStep(simulation_time_step)
@@ -202,15 +188,36 @@ def _run_mpc(force_vector, force_duration, force_start):
 
   return isHealthy, distance_from_goal
 
+LEARNED_TARGETS_FORCE = [(2.2124191940263436, 0.10155884183590148),
+                        (2.272376956850039, -0.3262119252507731),
+                        (2.223275170169494, 0.2746764813755742),
+                        (2.157904756009167, 0.27293394448350433),
+                        (2.3879839131111322, 0.011602868417574675)]
 
-LEARNED_TARGET = (2.094448746101612, -0.14546697368724615)
+LEARNED_TARGETS_NO_FORCE = [(2.26115599380903, 0.07505822151764242),
+                            (2.0396219207751365, -0.5650809778545292),
+                            (2.3556947541242326, 0.2624146696164019),
+                            (2.3153410310698077, 0.4426090811016912),
+                            (2.1786491869296176, -0.020231914190641555)]
 
-def _run_learned(force_vector, force_duration, force_start):
+def _run_learned(force_vector, force_duration, force_start, policy_name, use_force_estimator):
+
+  #Load Policy
+  train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_coef': 0.01, 'gamma': 0.99, 'lam': 0.95, 'learning_rate': 0.001, 
+                                  'max_grad_norm': 1.0, 'num_learning_epochs': 5, 'num_mini_batches': 4, 'schedule': 'adaptive', 
+                                  'use_clipped_value_loss': True, 'value_loss_coef': 1.0}, 
+                                  'init_member_classes': {}, 
+                                  'policy': {'activation': 'elu', 'actor_hidden_dims': [512, 256, 128], 'critic_hidden_dims': [512, 256, 128], 'init_noise_std': 1.0}, 
+                                  'runner': {'algorithm_class_name': 'PPO', 'checkpoint': -1, 'experiment_name': 'flat_a1', 'load_run': -1, 'max_iterations': 500, 
+                                  'num_steps_per_env': 24, 'force_estimation_timesteps': 25, 'policy_class_name': 'ActorCritic', 'resume': True, 'resume_path': None, 'run_name': '', 'save_interval': 50}, 
+                                  'runner_class_name': 'OnPolicyRunner', 'seed': 1}
+  ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=use_force_estimator), train_cfg_dict)
+  ppo_runner.load("/home/david/Desktop/guide_dog/logs/guide_dog/" + policy_name + "/model_1500.pt")
+  policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
 
   obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
-  env = EvalRobustnessEnv(isGUI=True)
-  #env = EvalRobustnessEnv(isGUI=False)
+  env = EvalRobustnessEnv(isGUI=False, isForceDetector=use_force_estimator)
   obs,_ = env.reset()
 
   isHealthy = True
@@ -230,10 +237,15 @@ def _run_learned(force_vector, force_duration, force_start):
     with torch.no_grad():
       #Update obs with estimated base_vel (replace features at the end of obs)
       estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
-      estimated_force = force_estimator(obs_history)
 
-    obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
-    obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
+      if(use_force_estimator):
+        estimated_force = force_estimator(obs_history)
+
+    if(use_force_estimator):
+      obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
+      obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
+    else:
+      obs = torch.cat((obs[:-3], estimated_base_vel.squeeze(0)),dim=-1)
 
     with torch.no_grad():
       action = policy(obs).detach()
@@ -247,7 +259,12 @@ def _run_learned(force_vector, force_duration, force_start):
 
   env.close()
 
-  distance_from_goal = math.sqrt(((final_position[0] - LEARNED_TARGET[0])**2) + (final_position[1] - LEARNED_TARGET[1])**2)
+  seed_idx = int(policy_name[-1])-1
+
+  if(use_force_estimator):
+    distance_from_goal = math.sqrt(((final_position[0] - LEARNED_TARGETS_FORCE[seed_idx][0])**2) + (final_position[1] - LEARNED_TARGETS_FORCE[seed_idx][1])**2)
+  else:
+    distance_from_goal = math.sqrt(((final_position[0] - LEARNED_TARGETS_NO_FORCE[seed_idx][0])**2) + (final_position[1] - LEARNED_TARGETS_NO_FORCE[seed_idx][1])**2)
 
   return isHealthy, distance_from_goal
 
@@ -262,8 +279,11 @@ FORCE_DURATION = [0.25, 0.5] #in seconds
 FORCE_START = [1, 2] #in seconds
 
 learned_isHealthy_lst = []
+learned_isHealthy_noForce_lst = []
 mpc_isHealthy_lst = []
+
 learned_distances = []
+learned_distances_noForce_lst = []
 mpc_distances = []
 
 num_trials = 100
@@ -286,13 +306,23 @@ for trial in range(num_trials):
   mpc_isHealthy_lst.append(mpc_isHealthy)
   mpc_distances.append(mpc_distance_from_goal)
 
-  learned_isHealthy, learned_distance_from_goal = _run_learned(force_vector, force_duration, force_start)
-  learned_isHealthy_lst.append(learned_isHealthy)
-  learned_distances.append(learned_distance_from_goal)
+  #Run trial for each seed of each learned policy
+  for seed in range(1,6):
 
+    #Without force estimator
+    learned_isHealthy, learned_distance_from_goal = _run_learned(force_vector, force_duration, force_start, "no_estimator" + str(seed), False)
+    learned_isHealthy_noForce_lst.append(learned_isHealthy)
+    learned_distances_noForce_lst.append(learned_distance_from_goal)
+
+    #With force estimator
+    learned_isHealthy, learned_distance_from_goal = _run_learned(force_vector, force_duration, force_start, "withEstimator_v" + str(seed), True)
+    learned_isHealthy_lst.append(learned_isHealthy)
+    learned_distances.append(learned_distance_from_goal)
 
 print("MPC isHealthy rate:", sum(mpc_isHealthy_lst)/num_trials)
-print("Learned isHealthy rate:", sum(learned_isHealthy_lst)/num_trials)
+print("Learned isHealthy No Force rate:", sum(learned_isHealthy_noForce_lst)/(num_trials*5))
+print("Learned isHealthy With Force rate:", sum(learned_isHealthy_lst)/(num_trials*5))
 
 print("MPC Avg distance:", sum(mpc_distances)/num_trials, np.std(mpc_distances))
-print("Learned Avg distance:", sum(learned_distances)/num_trials, np.std(learned_distances))
+print("Learned No Force Avg distance:", sum(learned_distances_noForce_lst)/(num_trials*5), np.std(learned_distances_noForce_lst))
+print("Learned With Force Avg distance:", sum(learned_distances)/(num_trials*5), np.std(learned_distances))

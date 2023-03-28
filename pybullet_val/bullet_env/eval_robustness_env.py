@@ -22,7 +22,7 @@ INIT_MOTOR_ANGLES = np.array([0.1, 0.8, -1.5, -0.1, 0.8, -1.5, 0.1, 1.0, -1.5, -
 
 class EvalRobustnessEnv(gym.Env):
 
-    def __init__(self, isGUI=False):
+    def __init__(self, isGUI=False, isForceDetector=True):
 
         self.num_privileged_obs = None
         self.num_obs = 120
@@ -30,6 +30,7 @@ class EvalRobustnessEnv(gym.Env):
         self.num_actions = 12
 
         self.isGUI = isGUI
+        self.isForceDetector = isForceDetector
 
         self._cam_dist = 1.0
         self._cam_yaw = 0
@@ -267,8 +268,10 @@ class EvalRobustnessEnv(gym.Env):
         state.extend(self.current_joint_angles - INIT_MOTOR_ANGLES) #Joint angles offset
         state.extend([x*0.05 for x in self.current_joint_velocities])  #Joint velocities
         state.extend(action.tolist())
-        state.extend([0,0,0,0,0,0])
-
+        if(self.isForceDetector):
+            state.extend([0,0,0,0,0,0])
+        else:
+            state.extend([0,0,0])
         return state    
 
 
