@@ -158,5 +158,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
 
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "v29" # -1 = last run
+        load_run = "old/v0" # -1 = last run
         checkpoint = 1500 # -1 = last saved model

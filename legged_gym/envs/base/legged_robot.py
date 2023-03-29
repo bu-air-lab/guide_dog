@@ -510,6 +510,18 @@ class LeggedRobot(BaseTask):
         #self.external_force_vectors[:, :2] = xy_push
         #self.external_force_vectors[:, 2] = z_push[:,0]
 
+
+        #Rotate external_force vector w.r.t robot frame
+        yaw = get_euler_xyz(self.base_quat)[2]
+
+        x_rot = xy_push[:,0]*torch.cos(yaw) - xy_push[:,1]*torch.sin(yaw)
+        y_rot = xy_push[:,0]*torch.sin(yaw) + xy_push[:,1]*torch.cos(yaw)
+
+        xy_push[:,0] = x_rot
+        xy_push[:,1] = y_rot
+
+
+        #Set push vector
         self.external_force_vectors[:, :2, 0] = xy_push
         self.external_force_vectors[:, 2, 0] = z_push[:,0]
 
@@ -521,6 +533,9 @@ class LeggedRobot(BaseTask):
         """
 
         #Apply push
+
+        #self.external_force_vectors[:,:,0] = torch.tensor([1,0,0])
+
         self.root_states[:, 7:9] = self.external_force_vectors[:, :2, 0]
         self.root_states[:, 9:10] = self.external_force_vectors[:, 2, 0].unsqueeze(1)
 

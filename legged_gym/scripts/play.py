@@ -42,7 +42,7 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 1)
     env_cfg.env.isRAO = False
 
     env_cfg.terrain.num_rows = 5
@@ -59,9 +59,9 @@ def play(args):
 
     env_cfg.terrain.mesh_type = 'plane'
 
-    env_cfg.commands.ranges.lin_vel_x = [.5, .5] # min max [m/s]
+    env_cfg.commands.ranges.lin_vel_x = [0.2, 0.2] # min max [m/s]
     env_cfg.commands.ranges.lin_vel_y = [0, 0]   # min max [m/s]
-    env_cfg.commands.ranges.ang_vel_yaw = [0, 0]    # min max [rad/s]
+    env_cfg.commands.ranges.ang_vel_yaw = [0.5, 0.5]    # min max [rad/s]
 
     # prepare environment
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
@@ -87,11 +87,19 @@ def play(args):
     camera_direction = np.array(env_cfg.viewer.lookat) - np.array(env_cfg.viewer.pos)
     img_idx = 0
 
+
+    obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs, device=env.device)
+
     for i in range(10*int(env.max_episode_length)):
+
+        obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
+
+        #Set most recent state as first
+        obs_history[:,0,:] = obs
 
         #Update obs with estimated base_vel and estimated force
         estimated_base_vel = base_vel_estimator(obs)
-        estimated_force = force_estimator(obs)
+        estimated_force = force_estimator(obs_history)
 
         #print(estimated_force)
 
