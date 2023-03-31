@@ -282,7 +282,7 @@ class PPO:
             #Only train if at least some external forces appear in the past set of observations
             true_forces = flipped_privileged_obs[:, :, -3:]
 
-            percent_zero_samples = 0.5
+            percent_zero_samples = 0.2
             num_states = self.force_estimator.num_timesteps
 
             if(torch.count_nonzero(true_forces).item() > 0):

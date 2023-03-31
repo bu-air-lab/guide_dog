@@ -188,17 +188,17 @@ def _run_mpc(force_vector, force_duration, force_start):
 
   return isHealthy, distance_from_goal
 
-LEARNED_TARGETS_FORCE = [(2.2124191940263436, 0.10155884183590148),
-                        (2.272376956850039, -0.3262119252507731),
-                        (2.223275170169494, 0.2746764813755742),
-                        (2.157904756009167, 0.27293394448350433),
-                        (2.3879839131111322, 0.011602868417574675)]
+LEARNED_TARGETS_FORCE = [(2.4717457579273443, -0.13153568252551676),
+                        (1.9886206438531304, 0.23275052617616304),
+                        (2.3312287583138747, 0.17575623730110093),
+                        (2.3524201953298554, 0.1955107740653754),
+                        (2.3742899989820394, -0.11848172376926122)]
 
-LEARNED_TARGETS_NO_FORCE = [(2.26115599380903, 0.07505822151764242),
-                            (2.0396219207751365, -0.5650809778545292),
-                            (2.3556947541242326, 0.2624146696164019),
-                            (2.3153410310698077, 0.4426090811016912),
-                            (2.1786491869296176, -0.020231914190641555)]
+LEARNED_TARGETS_NO_FORCE = [(2.4640057399800988, -0.40527395382736786),
+                            (2.1973504083564634, 0.4304406477621239),
+                            (2.2487457915746356, -0.03530365722510473),
+                            (2.358351938499667, 0.17532699777171643),
+                            (2.1908176892470728, 0.24950895678853496)]
 
 def _run_learned(force_vector, force_duration, force_start, policy_name, use_force_estimator):
 
@@ -286,7 +286,7 @@ learned_distances = []
 learned_distances_noForce_lst = []
 mpc_distances = []
 
-num_trials = 100
+num_trials = 1000
 
 for trial in range(num_trials):
 
@@ -315,7 +315,7 @@ for trial in range(num_trials):
     learned_distances_noForce_lst.append(learned_distance_from_goal)
 
     #With force estimator
-    learned_isHealthy, learned_distance_from_goal = _run_learned(force_vector, force_duration, force_start, "withEstimator_v" + str(seed), True)
+    learned_isHealthy, learned_distance_from_goal = _run_learned(force_vector, force_duration, force_start, "with_estimator" + str(seed), True)
     learned_isHealthy_lst.append(learned_isHealthy)
     learned_distances.append(learned_distance_from_goal)
 
