@@ -214,8 +214,8 @@ class BulletEnv(gym.Env):
 
     def getState(self, action):
 
-        position, _ = p.getBasePositionAndOrientation(self.robot)
-        print(position)
+        #position, _ = p.getBasePositionAndOrientation(self.robot)
+        #print(position)
 
         #Update current joint angles and velocities
         joint_states = p.getJointStates(self.robot, self.reordered_motor_ids)
@@ -238,7 +238,7 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 00
+        applied_force = 1500
         #if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
         #if(self.current_timestep % 100 == 0 and self.current_timestep > 5):
         if(self.current_timestep == 100):

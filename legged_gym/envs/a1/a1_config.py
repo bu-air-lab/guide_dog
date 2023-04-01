@@ -58,7 +58,7 @@ class GuideDogCfg( LeggedRobotCfg ):
 
         min_base_height = 0.25
 
-        use_force_estimator = False
+        use_force_estimator = True
 
         isRAO = False
         rao_torque_range = [-5, 5]

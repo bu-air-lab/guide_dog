@@ -13,12 +13,12 @@ import matplotlib.pyplot as plt
 
 
 
-isForceDetector = False
+isForceDetector = True
 
 
 #Load env:
 #env = BulletEnv(isGUI=False)
-env = BulletEnv(isGUI=False, isForceDetector=isForceDetector)
+env = BulletEnv(isGUI=True, isForceDetector=isForceDetector)
 
 #Load Policy
 train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_coef': 0.01, 'gamma': 0.99, 'lam': 0.95, 'learning_rate': 0.001, 
@@ -33,7 +33,9 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
 #ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
 ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=isForceDetector), train_cfg_dict)
 
-policy_name = "no_estimator5"
+#8,9,10,12
+
+policy_name = "estimator12"
 ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/"+ policy_name + ".pt")
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
