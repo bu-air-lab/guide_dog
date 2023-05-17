@@ -33,9 +33,10 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
 #ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
 ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=isForceDetector), train_cfg_dict)
 
-#8,9,10,12
-
-policy_name = "estimator12"
+"""
+4, 5, 2
+"""
+policy_name = "estimator4"
 ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/"+ policy_name + ".pt")
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
@@ -48,7 +49,7 @@ obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_
 
 estimated_forces = []
 
-for env_step in range(250):
+for env_step in range(500):
 
     #Shift all rows down 1 row (1 timestep)
     obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
@@ -90,5 +91,6 @@ if(isForceDetector):
     estimated_forces = np.array(estimated_forces)
 
     t = [i for i in range(estimated_forces.shape[0])]
+    plt.plot(t, estimated_forces[:,0])
     plt.plot(t, estimated_forces[:,1])
     plt.savefig(policy_name + '.png')

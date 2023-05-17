@@ -1,16 +1,10 @@
-# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator1 --seed=1 --headless
-# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator2 --seed=2 --headless
-# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator3 --seed=3 --headless
-# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator4 --seed=4 --headless
-# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator5 --seed=5 --headless
-
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator6 --seed=6 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator7 --seed=7 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator8 --seed=8 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator9 --seed=9 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator10 --seed=10 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator11 --seed=11 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator12 --seed=12 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator13 --seed=13 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator14 --seed=14 --headless
-python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator15 --seed=15 --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator1 --seed=1 --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator2 --seed=2 --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator3 --seed=3 --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator4 --seed=4 --headless
+python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator5 --seed=5 --headless
+# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator6 --seed=6 --headless
+# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator7 --seed=7 --headless
+# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator8 --seed=8 --headless
+# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator9 --seed=9 --headless
+# python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator10 --seed=10 --headless

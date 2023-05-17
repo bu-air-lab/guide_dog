@@ -381,7 +381,7 @@ class LeggedRobot(BaseTask):
         """ Callback called before computing terminations, rewards, and observations
             Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
         """
-        # 
+
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
         self._resample_commands(env_ids)
         if self.cfg.commands.heading_command:
@@ -405,6 +405,11 @@ class LeggedRobot(BaseTask):
             self.external_force_vectors[:,:,0] = self.external_force_vectors[:,:,1]
 
             self._push_robots()
+
+        #Apply small back push to simulate human holding rigid handle
+        elif (self.common_step_counter % self.cfg.domain_rand.back_push_interval <= self.cfg.domain_rand.back_push_length):
+            self._back_push_robots()
+
         else:
 
             #Shift by 1 timestep. Most recent timestep is 0 vector
@@ -544,6 +549,23 @@ class LeggedRobot(BaseTask):
 
         self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
 
+    def _back_push_robots(self):
+
+        xy_push = torch_rand_float(0, -self.cfg.domain_rand.back_push_vel, (self.num_envs, 2), device=self.device)
+
+        #Rotate external_force vector w.r.t robot frame
+        yaw = get_euler_xyz(self.base_quat)[2]
+        x_rot = xy_push[:,0]*torch.cos(yaw) - xy_push[:,1]*torch.sin(yaw)
+        y_rot = xy_push[:,0]*torch.sin(yaw) + xy_push[:,1]*torch.cos(yaw)
+        xy_push[:,0] = x_rot
+        xy_push[:,1] = y_rot
+
+        self.root_states[:, 7:9] = xy_push
+
+        self.gym.set_actor_root_state_tensor(self.sim, gymtorch.unwrap_tensor(self.root_states))
+
+
+
     def _update_terrain_curriculum(self, env_ids):
         """ Implements the game-inspired curriculum.
 
@@ -599,27 +621,6 @@ class LeggedRobot(BaseTask):
         noise_vec[18:30] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
         noise_vec[30:] = 0. # previous actions and state estimation
 
-        # noise_vec[:3] = 0. # commands
-        # noise_vec[3:15] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        # noise_vec[15:27] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        # noise_vec[27:] = 0. # previous actions
-
-        # noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
-        # noise_vec[3:6] = 0. # commands
-        # noise_vec[6:18] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        # noise_vec[18:30] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        # noise_vec[30:42] = 0. # previous actions
-
-
-        """noise_vec[:3] = noise_scales.lin_vel * noise_level * self.obs_scales.lin_vel
-        noise_vec[3:6] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
-        noise_vec[6:9] = noise_scales.gravity * noise_level
-        noise_vec[9:12] = 0. # commands
-        noise_vec[12:24] = noise_scales.dof_pos * noise_level * self.obs_scales.dof_pos
-        noise_vec[24:36] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
-        noise_vec[36:48] = 0. # previous actions
-        if self.cfg.terrain.measure_heights:
-            noise_vec[48:235] = noise_scales.height_measurements* noise_level * self.obs_scales.height_measurements"""
         return noise_vec
 
     #----------------------------------------
@@ -889,6 +890,7 @@ class LeggedRobot(BaseTask):
         self.max_episode_length = np.ceil(self.max_episode_length_s / self.dt)
 
         self.cfg.domain_rand.push_interval = np.ceil(self.cfg.domain_rand.push_interval_s / self.dt)
+        self.cfg.domain_rand.back_push_interval = np.ceil(self.cfg.domain_rand.back_push_interval_s / self.dt)
 
     def _draw_debug_vis(self):
         """ Draws visualizations for dubugging (slows down simulation a lot).

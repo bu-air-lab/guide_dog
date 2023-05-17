@@ -203,26 +203,10 @@ class EvalRobustnessEnv(gym.Env):
         if(self.isGUI):
             p.resetDebugVisualizerCamera(self._cam_dist, self._cam_yaw, self._cam_pitch, [0, 0, 0])
 
-
-        #self.current_joint_angles = pos
-        #self.current_joint_velocities = vel
         self.current_joint_angles = INIT_MOTOR_ANGLES
         self.current_joint_velocities = [0 for i in range(12)]
 
         self.current_timestep = 0
-
-        # #applied_force = random.randint(5, 25) # change this force thuogh 2000 N = 200 kg
-        # applied_force = random.randint(10, 700) # change this force thuogh 1000 N = 100 kg
-        # #applied_force = random.randint(5, 400) # change this force thuogh 1000 N = 100 kg
-        # #applied_force = random.randint(0, 0)
-        # angle = random.uniform(0, 2*math.pi)
-        # start = random.randint(50, 100)
-        # duration = random.randint(5, 20)
-        # x = math.cos(angle) * applied_force
-        # y = math.sin(angle) * applied_force
-        # self.force = (x,y)
-        # self.start = start
-        # self.duration = duration
 
         #initial action is to maintain default position??
         self.state = self.getState(torch.zeros(12))
@@ -259,12 +243,8 @@ class EvalRobustnessEnv(gym.Env):
         #print("Acc:", [round(x,2) for x in acceleration])
 
         state = []
-        #state.extend([2*x for x in linear_vel]) #Base velocity
-        #state.extend([0.25*x for x in angular_vel]) #Angular Velocity
         state.extend(command) #Commands scale is (2, 2, 0.25). Command is [1, 0, 0]
-
         state.extend([x*0.25 for x in acceleration])
-
         state.extend(self.current_joint_angles - INIT_MOTOR_ANGLES) #Joint angles offset
         state.extend([x*0.05 for x in self.current_joint_velocities])  #Joint velocities
         state.extend(action.tolist())

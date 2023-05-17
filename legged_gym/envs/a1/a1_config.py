@@ -82,6 +82,10 @@ class GuideDogCfg( LeggedRobotCfg ):
         max_z_vel = 0.1 #Max push velocity in z direction
         push_length_interval = [12, 24]
 
+        back_push_interval_s = 0.6 #Simulate human holding rigid handle connected to robot
+        back_push_length = 5
+        back_push_vel = 0.25
+
         randomize_friction = True
 
     class terrain( LeggedRobotCfg.terrain ):
@@ -158,5 +162,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
 
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "old/v0" # -1 = last run
+        load_run = "estimator1" # -1 = last run
         checkpoint = 1500 # -1 = last saved model
