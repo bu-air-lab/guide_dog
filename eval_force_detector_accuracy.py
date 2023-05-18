@@ -75,8 +75,6 @@ for y_force in y_force_strengths:
 
 		for trial in range(num_trials):
 
-			print(trial)
-
 			#Sample x force strength
 			x_force_strength = random.randint(0, 50)
 			bit = random.randint(0,1)
@@ -89,7 +87,6 @@ for y_force in y_force_strengths:
 			force_vector = [x_force_strength, y_force, 0]
 			force_duration = random.uniform(0.25, 0.5)
 			force_start = random.uniform(2, 3)
-			print(force_vector)
 
 			#Keep track of all estimated forces
 			estimated_forces = []
