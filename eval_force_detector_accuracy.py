@@ -56,100 +56,117 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                               'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=True), train_cfg_dict)
 
-accuracies = []
-false_positive_percentages = []
 
-#Evaluate on 5 different policies trained on different random seeds
-for seed in range(1,6):
+y_force_strengths = [25, 30, 35, 40, 45, 50, 55, 60]
+for y_force in y_force_strengths:
 
-	ppo_runner.load("/home/david/Desktop/guide_dog/logs/guide_dog/estimator" + str(seed) + "/model_1500.pt")
-	policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
+	accuracies = []
+	false_positive_percentages = []
 
-	num_trials = 1000
-	num_correct = 0
-	percent_false_positives_lst = []
+	for seed in range(1,6):
 
-	#For each policy, try many different forces to evaluate force detection accuracy
-	for trial in range(num_trials):
+		ppo_runner.load("/home/david/Desktop/guide_dog/logs/guide_dog/estimator" + str(seed) + "/model_1500.pt")
+		policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
 
-		obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
-		env = EvalRobustnessEnv(isGUI=False, isForceDetector=True)
-		obs,_ = env.reset()
-
-		#Sample force vector (only push in y-direction. we only want left or right pushes) and force duration
-		force_strength = random.randint(40, 100)
-		bit = random.randint(0,1)
-		if(bit == 0):
-			force_strength = -force_strength
-		force_vector = [0, force_strength, 0]
-		force_duration = random.uniform(0.25, 0.5)
-		force_start = random.uniform(2, 3)
-
-		#Keep track of all estimated forces
-		estimated_forces = []
-
-		#Run policy at 0.5 m/s in PyBullet, apply left and right force sampled from some distribution
-		#250 steps takes 0.005 * 4 * 250 = 5 seconds
-		for env_step in range(250):
-
-			#Shift all rows down 1 row (1 timestep)
-			obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
-			obs = torch.Tensor(obs)
-
-			#Set most recent state as first
-			obs_history[:,0,:] = obs
-
-			with torch.no_grad():
-				#Update obs with estimated base_vel and force (replace features at the end of obs)
-				estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
-				estimated_force = force_estimator(obs_history)
-				estimated_forces.append(estimated_force.tolist()[0])
-
-			obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
-			obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
-
-			with torch.no_grad():
-				action = policy(obs).detach()
-
-			obs, rew, done, info = env.step(action.detach(), force_vector, force_duration, force_start)
-
-		env.close()
+		num_trials = 1000
+		num_correct = 0
+		percent_false_positives_lst = []
 
 
-		#Iterate through signal in chunks of 25 timesteps, detecting signals in the past 50 timesteps
-		#Ignore the first 100 timesteps, they tend to contain more noise
-		estimated_forces = np.array(estimated_forces)[:,1]
-		detected_forces = []
-		for t in range(100, 250, 25):
+		for trial in range(num_trials):
 
-		    forces = estimated_forces[:t]
-		    detected_forces.append(detect_force(forces))
+			print(trial)
 
-		#Determine whether the true force was predicted
-		isCorrect = False
-		if(force_vector[1] > 0 and 'LEFT' in detected_forces):
-			isCorrect = True
-		elif(force_vector[1] <= 0 and 'RIGHT' in detected_forces):
-			isCorrect = True
+			#Sample x force strength
+			x_force_strength = random.randint(0, 50)
+			bit = random.randint(0,1)
+			if(bit == 0):
+				x_force_strength = -x_force_strength
 
-		if(isCorrect):
-			num_correct += 1
+			bit = random.randint(0,1)
+			if(bit == 0):
+				y_force = -y_force
+			force_vector = [x_force_strength, y_force, 0]
+			force_duration = random.uniform(0.25, 0.5)
+			force_start = random.uniform(2, 3)
+			print(force_vector)
 
-		#Determine percent of timestesps there is a false positve
-		num_false_positives = detected_forces.count('LEFT') + detected_forces.count('RIGHT')
-		if(isCorrect):
-			num_false_positives -= 1
+			#Keep track of all estimated forces
+			estimated_forces = []
 
-		percent_false_positives = num_false_positives/len(detected_forces)
-		percent_false_positives_lst.append(percent_false_positives)
+			obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
+			env = EvalRobustnessEnv(isGUI=False, isForceDetector=True)
+			obs,_ = env.reset()
 
-	print("Accuracy:", num_correct/num_trials)
-	print("Avg False Positive Ratio:", np.mean(percent_false_positives_lst))
+			#Run policy at 0.5 m/s in PyBullet, apply left and right force sampled from some distribution
+			#250 steps takes 0.005 * 4 * 250 = 5 seconds
+			for env_step in range(250):
 
-	accuracies.append(num_correct/num_trials)
-	false_positive_percentages.append(np.mean(percent_false_positives_lst))
+				#Shift all rows down 1 row (1 timestep)
+				obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
+				obs = torch.Tensor(obs)
 
-print("Avg Accuracy:", np.mean(accuracies))
-print("Accuracy STD:", np.std(accuracies))
-print("False positives:", np.mean(false_positive_percentages))
-print("False positive STD:", np.std(false_positive_percentages))
+				#Set most recent state as first
+				obs_history[:,0,:] = obs
+
+				with torch.no_grad():
+					#Update obs with estimated base_vel and force (replace features at the end of obs)
+					estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
+					estimated_force = force_estimator(obs_history)
+					estimated_forces.append(estimated_force.tolist()[0])
+
+				obs = torch.cat((obs[:-6], estimated_base_vel.squeeze(0)),dim=-1)
+				obs = torch.cat((obs, estimated_force.squeeze(0)),dim=-1)
+
+				with torch.no_grad():
+					action = policy(obs).detach()
+
+				obs, rew, done, info = env.step(action.detach(), force_vector, force_duration, force_start)
+
+			env.close()
+
+
+			#Iterate through signal in chunks of 25 timesteps, detecting signals in the past 50 timesteps
+			#Ignore the first 100 timesteps, they tend to contain more noise
+			estimated_forces = np.array(estimated_forces)[:,1]
+			detected_forces = []
+			for t in range(100, 250, 25):
+
+			    forces = estimated_forces[:t]
+			    detected_forces.append(detect_force(forces))
+
+			#Determine whether the true force was predicted
+			isCorrect = False
+			if(force_vector[1] > 0 and 'LEFT' in detected_forces):
+				isCorrect = True
+			elif(force_vector[1] <= 0 and 'RIGHT' in detected_forces):
+				isCorrect = True
+
+			if(isCorrect):
+				num_correct += 1
+
+			#Determine percent of timestesps there is a false positve
+			num_false_positives = detected_forces.count('LEFT') + detected_forces.count('RIGHT')
+			if(isCorrect):
+				num_false_positives -= 1
+
+			percent_false_positives = num_false_positives/len(detected_forces)
+			percent_false_positives_lst.append(percent_false_positives)
+
+		print("Accuracy:", num_correct/num_trials)
+		print("Avg False Positive Ratio:", np.mean(percent_false_positives_lst))
+
+		accuracies.append(num_correct/num_trials)
+		false_positive_percentages.append(np.mean(percent_false_positives_lst))
+
+	#Save avg accuracy and false positive rates to file per y_force
+	with open("force_detector_accuracy.txt", "a") as f:
+		f.write(str(np.mean(accuracies)) + ' ')
+		f.write(str(np.std(accuracies)) + ' ')
+		f.write(str(np.mean(false_positive_percentages)) + ' ')
+		f.write(str(np.std(accuracies)) + '\n')
+
+# print("Avg Accuracy:", np.mean(accuracies))
+# print("Accuracy STD:", np.std(accuracies))
+# print("False positives:", np.mean(false_positive_percentages))
+# print("False positive STD:", np.std(false_positive_percentages))
