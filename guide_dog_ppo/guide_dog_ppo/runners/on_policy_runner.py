@@ -31,7 +31,14 @@ class OnPolicyRunner:
             num_critic_obs = self.env.num_obs
 
         base_velocity_estimator = BaseVelocityEstimator(self.env.num_obs).to(self.device)
-        force_estimator = ForceEstimator(self.env.num_obs, self.cfg['force_estimation_timesteps']).to(self.device)
+
+        train_vel_only = False
+        if hasattr(self.env, 'isBlankEnv'):
+            train_vel_only = self.env.train_vel_only
+        else:
+            train_vel_only = self.env.cfg.env.train_vel_only
+
+        force_estimator = ForceEstimator(self.env.num_obs, self.cfg['force_estimation_timesteps'], train_vel_only=train_vel_only).to(self.device)
 
         actor_critic_class = eval(self.cfg["policy_class_name"]) # ActorCritic
         actor_critic: ActorCritic = actor_critic_class( self.env.num_obs,
@@ -45,7 +52,8 @@ class OnPolicyRunner:
             self.alg: PPO = alg_class(actor_critic, 
                                     base_velocity_estimator, 
                                     force_estimator, 
-                                    isForceEstimator=self.env.use_force_estimator, 
+                                    isForceEstimator=self.env.use_force_estimator,
+                                    train_vel_only=self.env.train_vel_only,
                                     device=self.device, 
                                     **self.alg_cfg)
         else:
@@ -53,6 +61,7 @@ class OnPolicyRunner:
                                     base_velocity_estimator, 
                                     force_estimator, 
                                     isForceEstimator=self.env.cfg.env.use_force_estimator, 
+                                    train_vel_only=self.env.cfg.env.train_vel_only,
                                     device=self.device, 
                                     **self.alg_cfg)
 

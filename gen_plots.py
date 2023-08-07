@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
  
 plt.matplotlib.rcParams['pdf.fonttype'] = 42
 plt.matplotlib.rcParams['ps.fonttype'] = 42
+plt.matplotlib.rcParams.update({'font.size': 15})
 
 
 filename = 'force_detector_accuracy.txt'

@@ -60,6 +60,9 @@ class GuideDogCfg( LeggedRobotCfg ):
 
         use_force_estimator = True
 
+        #train force estimator only over ground truth base vel and vel cmd
+        train_vel_only = True
+
         isRAO = False
         rao_torque_range = [-5, 5]
 
@@ -162,5 +165,5 @@ class GuideDogCfgPPO( LeggedRobotCfgPPO ):
 
         run_name = ''
         experiment_name = 'guide_dog'
-        load_run = "estimator1" # -1 = last run
+        load_run = "estimator4" # -1 = last run
         checkpoint = 1500 # -1 = last saved model

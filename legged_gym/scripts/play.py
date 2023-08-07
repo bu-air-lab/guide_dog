@@ -42,7 +42,7 @@ import torch
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 20)
+    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 10)
     env_cfg.env.isRAO = False
 
     env_cfg.terrain.num_rows = 5
@@ -51,11 +51,12 @@ def play(args):
     env_cfg.noise.add_noise = False
     env_cfg.domain_rand.randomize_friction = False
 
-    #env_cfg.domain_rand.push_robots = False
-    # env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
-    # env_cfg.domain_rand.max_push_vel = 0.75 #1 #Max push velocity
-    # env_cfg.domain_rand.push_length_interval = [12, 24]
-    # env_cfg.domain_rand.max_z_vel = 0.1
+    env_cfg.domain_rand.push_robots = True
+    env_cfg.domain_rand.push_interval_s = 3#15 #How often to push (lower means more frequent)
+    env_cfg.domain_rand.max_push_vel = 0.75 #1 #Max push velocity
+    env_cfg.domain_rand.push_length_interval = [12, 24]
+    env_cfg.domain_rand.max_z_vel = 0.1
+    env_cfg.domain_rand.back_push_vel = 0
 
     env_cfg.terrain.mesh_type = 'plane'
 

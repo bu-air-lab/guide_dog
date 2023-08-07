@@ -13,7 +13,8 @@ class PPO:
                  actor_critic,
                  base_velocity_estimator,
                  force_estimator,
-                 isForceEstimator=True, 
+                 isForceEstimator=True,
+                 train_vel_only=False,
                  num_learning_epochs=1,
                  num_mini_batches=1,
                  clip_param=0.2,
@@ -55,6 +56,7 @@ class PPO:
         self.force_estimator_optimizer = optim.Adam(self.force_estimator.parameters(), lr=learning_rate)
 
         self.isForceEstimator = isForceEstimator
+        self.train_vel_only = train_vel_only
 
         # PPO parameters
         self.clip_param = clip_param
@@ -107,6 +109,24 @@ class PPO:
 
             #Force estimator expects input as num environments x num states x num features
             force_estimator_input = torch.transpose(force_estimator_input, 0, 1)
+
+            if(self.train_vel_only):
+
+                recent_priviledged_obs = self.storage.privileged_observations[:self.storage.step+1,:,:]
+                recent_priviledged_obs = torch.flip(recent_priviledged_obs, [0])
+
+                later_priviledged_obs = self.storage.privileged_observations[self.storage.step+1:,:,:]
+                later_priviledged_obs = torch.flip(later_priviledged_obs, [0])
+
+                reordered_priviledged_observations = torch.cat((recent_priviledged_obs, later_priviledged_obs),dim=0)
+
+                base_vels = reordered_priviledged_observations[:self.force_estimator.num_timesteps, :, -6:-3]
+                base_vels = torch.transpose(base_vels, 0, 1)
+                vel_cmds = force_estimator_input[:, :, :3]
+
+                #Trained with vel first, then vel_cmd
+                force_estimator_input = torch.cat((base_vels,vel_cmds), dim=2)
+
 
             estimated_force = self.force_estimator(force_estimator_input)
 
@@ -201,11 +221,6 @@ class PPO:
 
                 loss = surrogate_loss + self.value_loss_coef * value_loss - self.entropy_coef * entropy_batch.mean()
 
-
-                #print(entropy_batch.mean())
-                #print("Surrogate Loss:", surrogate_loss.item())
-                #print("Value Loss:", value_loss.item())
-
                 # Update actor_critic params
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -227,45 +242,6 @@ class PPO:
                 self.base_velocity_estimator_optimizer.zero_grad()
                 base_velocity_estimator_computed_loss.backward()
                 self.base_velocity_estimator_optimizer.step()
-
-                #print("Base Vel Estimator Loss:", base_velocity_estimator_computed_loss.item())
-
-
-                # # Update force estimator via supervised learning
-                # true_force = critic_obs_batch[:,-3:]
-
-                # #Only update force estimator if batch contains some non-zero forces
-                # if(torch.count_nonzero(true_force).item() > 0):
-
-                #     #Ensure only some percentage of batch is 0 forces
-                #     percentage_zero_samples = 0.4
-                #     num_nonzero_samples = int(torch.count_nonzero(true_force).item()/3)
-                #     num_total_samples = int(num_nonzero_samples/(1-percentage_zero_samples))
-                #     num_zero_samples =  num_total_samples - num_nonzero_samples
-
-                #     zero_force_indicies = (true_force[:,0] == 0).nonzero()
-                #     zero_force_indicies = zero_force_indicies[:num_zero_samples]
-
-                #     non_zero_force_indicies = (true_force[:,0] != 0).nonzero()
-
-                #     #Combine and shuffle indicies
-                #     rebalanced_indicies = torch.cat(( zero_force_indicies, non_zero_force_indicies ),dim=0)
-                #     rebalanced_indicies = rebalanced_indicies[torch.randperm(rebalanced_indicies.size()[0])]
-
-                #     rebalanced_true_force = critic_obs_batch[rebalanced_indicies,-3:].squeeze(1)
-                #     rebalanced_samples = obs_batch[rebalanced_indicies, :].squeeze(1)
-
-                #     predicted_force = self.force_estimator(rebalanced_samples)
-
-                #     force_estimator_computed_loss = self.force_estimator_loss(predicted_force, rebalanced_true_force)
-
-                #     self.force_estimator_optimizer.zero_grad()
-                #     force_estimator_computed_loss.backward()
-                #     self.force_estimator_optimizer.step()
-
-                #     print("Force Estimator Loss:", force_estimator_computed_loss.item())
-
-
 
 
         if(self.isForceEstimator):
@@ -335,6 +311,10 @@ class PPO:
 
                     X = torch.zeros(state_indicies.shape[0], num_states, flipped_obs.shape[2], device=self.device)
 
+                    #Only train over ground-truth base velocity and velocity commands
+                    if(self.train_vel_only):
+                        X = torch.zeros(state_indicies.shape[0], num_states, 6, device=self.device)
+
                     #We expect Y to have shape num samples(46080) x label(3)
                     Y = torch.zeros(state_indicies.shape[0], 3, device=self.device)
 
@@ -342,10 +322,18 @@ class PPO:
                     for i in range(rebalanced_training_indicies.shape[0]):
 
                         sample = flipped_obs[state_indicies[i]-num_states:state_indicies[i], env_indicies[i], :]
+
+                        #Only include ground-truth base vel and base vel commands in sample
+                        if(self.train_vel_only):
+                            sample_vels = flipped_privileged_obs[state_indicies[i]-num_states:state_indicies[i], env_indicies[i], -6:-3]
+                            sample_vel_cmds = flipped_obs[state_indicies[i]-num_states:state_indicies[i], env_indicies[i], :3]
+                            sample = torch.cat((sample_vels,sample_vel_cmds), dim=1)
+
                         X[i] = sample
 
                         label = flipped_privileged_obs[state_indicies[i], env_indicies[i], -3:]
                         Y[i] = label
+
 
 
                     #Its possible X can have 0 samples, when earlier states are the only ones with nonzero forces
