@@ -60,13 +60,13 @@
 
                     <h1 align="center">Abstract</h1>
                     <div style="font-size:30px">
-                        <p align="justify" width="20%"> Seeing-eye robots are very useful tools for guiding visually impaired people, po-
-                            tentially producing a huge societal impact given the low availability and high cost
-                            of real guide dogs. Although a few seeing-eye robot systems have already been
-                            demonstrated, none considered external tugs from humans, which frequently oc-
-                            cur in a real guide dog setting. In this paper, we simultaneously train a locomo-
-                            tion controller that is robust to external tugging forces via Reinforcement Learn-
-                            ing (RL), and an external force estimator via supervised learning. The controller
+                        <p align="justify" width="20%"> Seeing-eye robots are very useful tools for guiding visually impaired people, 
+                            potentially producing a huge societal impact given the low availability and high cost of real guide dogs. 
+                            Although a few seeing-eye robot systems have already been
+                            demonstrated, none considered external tugs from humans, which frequently occur 
+                            in a real guide dog setting. In this paper, we simultaneously train a locomotion controller 
+                            that is robust to external tugging forces via Reinforcement Learning (RL), 
+                            and an external force estimator via supervised learning. The controller
                             ensures stable walking, and the force estimator enables the robot to respond to
                             the external forces from the human. These forces are used to guide the robot to
                             the global goal, which is unknown to the robot, while the robot guides the human
@@ -89,8 +89,8 @@
                         <p align="justify" width="20%">
                             Overview of our approach. Our locomotion controller (circled in red) contains a velocity
 estimator, force estimator, and locomotion policy, all of which are trained in simulation. The base
-velocity estimator and force estimator are trained via supervised learning, using privileged infor-
-mation from the simulator as labels. The locomotion policy is trained via RL, and outputs target
+velocity estimator and force estimator are trained via supervised learning, using privileged information 
+from the simulator as labels. The locomotion policy is trained via RL, and outputs target
 joint angles to a PD controller which converts them to joint torques which are directly applied to
 the robot. During deployment, our locomotion controller estimates external force at each time step.
 Force direction is derived from peaks in the estimated force signal. The direction of force determines
