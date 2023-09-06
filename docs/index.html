@@ -3,7 +3,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Leveraging Human Knowledge to Learn Diverse Quadruped Locomotion Policies</title>
+    <title>Seeing-Eye Quadruped Navigation with Force Responsive Locomotion Control</title>
 
     <link rel="stylesheet" type="text/css" href="css/style.css">
     <link href="/css/css" rel="stylesheet" type="text/css">
@@ -36,22 +36,22 @@
 
     <div id="primarycontent">
         <center>
-            <h0>Leveraging Human Knowledge to Learn Diverse Quadruped Locomotion Policies</h0>
+            <h0>Seeing-Eye Quadruped Navigation with Force Responsive Locomotion Control</h0>
         </center>
         <center>
-            <p>David DeFazio,&nbsp;&nbsp;Yohei Hayamizu,&nbsp;&nbsp;Shiqi Zhang</p>
+            <p>David DeFazio,&nbsp;&nbsp;Eisuke Hirota,&nbsp;&nbsp;Shiqi Zhang</p>
             <center>
                 <p>SUNY Binghamton</p>
                 <center>
-                    <p>IEEE RA-L, 2023 (under review) </p>
-                    <p>[<a href="#">Paper</a>]&nbsp[<a href="https://github.com/bu-air-lab/RM_Isaac">Code</a>]&nbsp[<a href="https://youtu.be/lCvopVym4q0">Video</a>]
+                    <p>CoRL, 2023</p>
+                    <p>[<a href="#">Paper</a>]&nbsp[<a href="https://github.com/bu-air-lab/guide_dog">Code</a>]&nbsp[<a href="https://youtu.be/NdmpslnWkUE">Video</a>]
                     </p>
 
                   <table border="0" cellspacing="10" cellpadding="0" align="center">
                         <tbody>
                             <tr>
                                 <td valign="middle" align="center">
-                                    <iframe width="500" height="320" src="https://youtube.com/embed/lCvopVym4q0"></iframe>
+                                    <iframe width="500" height="320" src="https://youtube.com/embed/NdmpslnWkUE"></iframe>
                                 </td>
                             </tr>
                         </tbody>
@@ -60,24 +60,20 @@
 
                     <h1 align="center">Abstract</h1>
                     <div style="font-size:30px">
-                        <p align="justify" width="20%"> Legged robots are versatile in navigating challenging terrains and environments that can be difficult to other
-robot platforms (e.g., the wheeled). Although there has been
-success in applying reinforcement learning (RL) methods to
-learn quadruped locomotion policies, there is little research
-on leveraging rule-based human knowledge to facilitate this
-learning process. In this paper, we develop a novel approach,
-referred to as RMLL, demonstrating that human knowledge in
-the form of Linear Temporal Logic formulas can be applied
-to specify different locomotion gaits, and efficiently learn
-these gaits via RL. This is done without the use of reference
-trajectories, another form of prior knowledge commonly used
-to specify gait type. To achieve this, we express our task as an
-automaton constructed under a recently developed framework
-called Reward Machine (RM). Experimental results in simu-
-lation show that exposing the policy to the RM state allows
-for better leveraging this rule-based knowledge, in terms of
-improved learning efficiency. We demonstrate these learned
-policies on a quadruped robot in outdoor environments.</p>
+                        <p align="justify" width="20%"> Seeing-eye robots are very useful tools for guiding visually impaired people, po-
+                            tentially producing a huge societal impact given the low availability and high cost
+                            of real guide dogs. Although a few seeing-eye robot systems have already been
+                            demonstrated, none considered external tugs from humans, which frequently oc-
+                            cur in a real guide dog setting. In this paper, we simultaneously train a locomo-
+                            tion controller that is robust to external tugging forces via Reinforcement Learn-
+                            ing (RL), and an external force estimator via supervised learning. The controller
+                            ensures stable walking, and the force estimator enables the robot to respond to
+                            the external forces from the human. These forces are used to guide the robot to
+                            the global goal, which is unknown to the robot, while the robot guides the human
+                            around nearby obstacles via a local planner. Experimental results in simulation
+                            and on hardware show that our controller is robust to external forces, and our
+                            seeing-eye system can accurately detect force direction. We demonstrate our full
+                            seeing-eye robot system on a real quadruped robot with a blindfolded human.</p>
                     </div>
 
                     <br>
@@ -85,19 +81,27 @@ policies on a quadruped robot in outdoor environments.</p>
                     <h1 align="center">Overview</h1>
                     <table border="0" cellspacing="10" cellpadding="0" align="center">
                         <td>
-                            <img src="./img/overview.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                            <img src="./img/overview_fig-1.pdf" style="width:100%;margin-left:0%;margin-right:0%;">
                         </td>
                     </table>
 
                     <div style="font-size:30px">
                         <p align="justify" width="20%">
-                            Overview of RM-based Locomotion Learning (RMLL). We consider propositional statements specifying foot contacts. We then construct an automaton via LTL formulas over propositional statements for each locomotion gait (left side). We follow the RM framework to convert an environment with non-Markovian rewards to a cross-product MDP, constructed via the environment and automaton. Our agent then learns from this gait-specific, cross-product MDP (right side)
+                            Overview of our approach. Our locomotion controller (circled in red) contains a velocity
+estimator, force estimator, and locomotion policy, all of which are trained in simulation. The base
+velocity estimator and force estimator are trained via supervised learning, using privileged infor-
+mation from the simulator as labels. The locomotion policy is trained via RL, and outputs target
+joint angles to a PD controller which converts them to joint torques which are directly applied to
+the robot. During deployment, our locomotion controller estimates external force at each time step.
+Force direction is derived from peaks in the estimated force signal. The direction of force determines
+the next local navigation goal for our navigation system to take, which returns velocity commands
+to our controller.
                         </p>
                     </div>
 
                     <br>
 
-                    <h1 align="center">Experiment Results</h1>
+                    <!-- <h1 align="center">Experiment Results</h1>
 
                     <table border="0" cellspacing="10" cellpadding="0" align="center">
                         <tbody>
@@ -129,10 +133,10 @@ policies on a quadruped robot in outdoor environments.</p>
                         <p >
 		Reward curves for all gaits. RMLL more efficiently accumulates reward for each gait, particularly for the more complex gaits Walk and Three-One.
                         </p>
-                    </div>
+                    </div> -->
 			
 
-                    <h1 align="center">Demonstrations</h1>
+                    <!-- <h1 align="center">Demonstrations</h1>
 
                     <table border="0" cellspacing="10" cellpadding="0" align="center">
                         <tbody>
@@ -188,7 +192,7 @@ policies on a quadruped robot in outdoor environments.</p>
                         <p align="justify">
                             This work has taken place in the Autonomous Intelligent Robotics (AIR) Group at SUNY Binghamton. AIR research is supported in part by grants from the National Science Foundation (IIS-1925044 and REU Supplement), Ford Motor Company (URP Awards), OPPO (Faculty Research Award), and SUNY Research Foundation
                         </p>
-                    </div>
+                    </div> -->
                     <br><br>
 
 </html>
