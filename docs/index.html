@@ -81,7 +81,7 @@
                     <h1 align="center">Overview</h1>
                     <table border="0" cellspacing="10" cellpadding="0" align="center">
                         <td>
-                            <img src="img/overview_fig.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                            <img src="./img/overview_fig.png" style="width:100%;margin-left:0%;margin-right:0%;">
                         </td>
                     </table>
 
@@ -101,40 +101,59 @@ to our controller.
 
                     <br>
 
-                    <!-- <h1 align="center">Experiment Results</h1>
-
-                    <table border="0" cellspacing="10" cellpadding="0" align="center">
-                        <tbody>
-                            <tr>
-                                <td><img src="./img/plot_trot.png" width="300" height="250">
-                                </td>
-                                <td><img src="./img/plot_bound.png" width="300" height="250">
-                                </td>
-                                <td><img src="./img/plot_pace.png" width="300" height="250">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-
-                   <table border="0" cellspacing="10" cellpadding="0" align="center">
-                        <tbody>
-                            <tr>
-                                <td><img src="./img/plot_walk.png" width="300" height="250">
-                                </td>
-                                <td><img src="./img/plot_Three-One.png" width="300" height="250">
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h1 align="center">Experiments</h1>
 
 
                     <div style="font-size:30px">
                         <p >
-		Reward curves for all gaits. RMLL more efficiently accumulates reward for each gait, particularly for the more complex gaits Walk and Three-One.
+                            We evaluate the accuracy of our force estimator through experiments in simulation, and on hardware.
                         </p>
-                    </div> -->
+                    </div> 
+
+
+                    <h2 align="center">Simulation</h2>
+
+                    <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <td>
+                            <img src="./img/force_detector_accuracy.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p >
+                            We report the accuracy and false positive rate of our force estimators, given forces of varied strength.
+                            The shaded region indicates the standard deviation between the five policies trained over five different random seeds.
+                        </p>
+                    </div> 
+
+
+                    <h2 align="center">Hardware</h2>
+
+                    <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <td>
+                            <img src="./img/force_acc_signal.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p >
+                            Measured acceleration (top) and estimated force (bottom) during a single trial. Tugs are denoted by red boxes.
+                        </p>
+                    </div> 
 			
+                    <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <td>
+                            <img src="./img/table.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p >
+                            Force estimation via accelerometer readings vs force estimator signal.
+                        </p>
+                    </div> 
+			
+
 
                     <!-- <h1 align="center">Demonstrations</h1>
 
