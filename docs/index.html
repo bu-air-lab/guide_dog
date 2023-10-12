@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Seeing-Eye Quadruped Navigation with Force Responsive Locomotion Control</title>
+
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link href="/css/css" rel="stylesheet" type="text/css">
+
+<body data-gr-c-s-loaded="true" data-new-gr-c-s-check-loaded="14.998.0" data-gr-ext-installed="">
+    <link media="all" href="/css/glab.css" type="text/css" rel="StyleSheet">
+
+    <style type="text/css" media="all">
+        IMG {
+            PADDING-RIGHT: 0px;
+            PADDING-LEFT: 0px;
+            FLOAT: right;
+            PADDING-BOTTOM: 0px;
+            PADDING-TOP: 0px
+        }
+
+        #primarycontent {
+            MARGIN-LEFT: auto;
+            WIDTH: expression(document.body.clientWidth > 500? "500px": "auto");
+            MARGIN-RIGHT: auto;
+            TEXT-ALIGN: left;
+            max-width: 750px;
+        }
+
+        BODY {
+            TEXT-ALIGN: center
+        }
+
+    </style>
+
+    <div id="primarycontent">
+        <center>
+            <h0>Seeing-Eye Quadruped Navigation with Force Responsive Locomotion Control</h0>
+        </center>
+        <center>
+            <p>David DeFazio,&nbsp;&nbsp;Eisuke Hirota,&nbsp;&nbsp;Shiqi Zhang</p>
+            <center>
+                <p>SUNY Binghamton</p>
+                <center>
+                    <p>CoRL, 2023</p>
+                    <p>[<a href="https://arxiv.org/pdf/2309.04370.pdf">Paper</a>]&nbsp[<a href="https://github.com/bu-air-lab/guide_dog">Code</a>]&nbsp[<a href="https://youtu.be/fzHmIR8P0Bs">Video</a>]
+                    </p>
+
+                  <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <tbody>
+                            <tr>
+                                <td valign="middle" align="center">
+                                    <iframe width="500" height="320" src="https://youtube.com/embed/fzHmIR8P0Bs"></iframe>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                    <h1 align="center">Abstract</h1>
+                    <div style="font-size:30px">
+                        <p align="justify" width="20%"> Seeing-eye robots are very useful tools for guiding visually impaired people, 
+                            potentially producing a huge societal impact given the low availability and high cost of real guide dogs. 
+                            Although a few seeing-eye robot systems have already been
+                            demonstrated, none considered external tugs from humans, which frequently occur 
+                            in a real guide dog setting. In this paper, we simultaneously train a locomotion controller 
+                            that is robust to external tugging forces via Reinforcement Learning (RL), 
+                            and an external force estimator via supervised learning. The controller
+                            ensures stable walking, and the force estimator enables the robot to respond to
+                            the external forces from the human. These forces are used to guide the robot to
+                            the global goal, which is unknown to the robot, while the robot guides the human
+                            around nearby obstacles via a local planner. Experimental results in simulation
+                            and on hardware show that our controller is robust to external forces, and our
+                            seeing-eye system can accurately detect force direction. We demonstrate our full
+                            seeing-eye robot system on a real quadruped robot with a blindfolded human.</p>
+                    </div>
+
+                    <br>
+
+                    <h1 align="center">Overview</h1>
+                    <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <td>
+                            <img src="./img/overview_fig.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p align="justify" width="20%">
+                            Overview of our approach. Our locomotion controller (circled in red) contains a velocity
+estimator, force estimator, and locomotion policy, all of which are trained in simulation. The base
+velocity estimator and force estimator are trained via supervised learning, using privileged information 
+from the simulator as labels. The locomotion policy is trained via RL, and outputs target
+joint angles to a PD controller which converts them to joint torques which are directly applied to
+the robot. During deployment, our locomotion controller estimates external force at each time step.
+Force direction is derived from peaks in the estimated force signal. The direction of force determines
+the next local navigation goal for our navigation system to take, which returns velocity commands
+to our controller.
+                        </p>
+                    </div>
+
+                    <br>
+
+                    <h1 align="center">Simulation Experiments</h1>
+
+
+                    <!-- <div style="font-size:30px">
+                        <p align="left">
+                            We evaluate the accuracy of our force estimator through experiments in simulation, and on hardware.
+                        </p>
+                    </div>  -->
+
+
+                    <!-- <h2 align="center">Simulation</h2> -->
+                    <!-- <b> Simulation </b> -->
+
+                    
+                    <table border="0" cellspacing="10" cellpadding="0" width="100%">
+
+                        <div style="margin: 0 auto; width: 500px">
+                            <img src="./img/force_detector_accuracy.png" style="width: 500px" />
+                        </div>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p align="left">
+                            We report the accuracy and false positive rate of our force estimators, given forces of varied strength.
+                            The shaded region indicates the standard deviation between the five policies trained over five different random seeds.
+                        </p>
+                    </div> 
+
+                    <br>
+
+                    <h1 align="center">Hardware Experiments</h1>
+
+                    <table border="0" cellspacing="10" cellpadding="0" width="100%">
+                        <!-- <td>
+                            <img src="./img/force_acc_signal.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td> -->
+
+                        <div style="margin: 0 auto; width: 400px">
+                            <img src="./img/force_acc_signal.png" style="width: 400px" />
+                        </div>
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p align="left">
+                            Measured acceleration (top) and estimated force (bottom) during a single trial. Tugs are denoted by red boxes.
+                        </p>
+                    </div> 
+			
+                    <table border="0" cellspacing="10" cellpadding="0" width="100%">
+                        <!-- <td>
+                            <img src="./img/table.png" style="width:100%;margin-left:0%;margin-right:0%;">
+                        </td> -->
+                        <div style="margin: 0 auto; width: 600px">
+                            <img src="./img/table.png" style="width: 600px" />
+                        </div>
+
+                    </table>
+
+                    <div style="font-size:30px">
+                        <p align="left">
+                            Force estimation via accelerometer readings vs force estimator signal.
+                        </p>
+                    </div> 
+			
+
+
+                    <!-- <h1 align="center">Demonstrations</h1>
+
+                    <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <tbody>
+                            <tr>
+                                <td>
+					<center><h3>Trot</h3></center>
+					<video width="320" height="240" controls>
+					<source src="./img/trot_vid_small.mp4" type="video/mp4">
+					</video>
+                                </td>
+                                <td>
+					<center><h3>Bound</h3></center>
+					<video width="320" height="240" controls>
+					<source src="./img/bound_vid_small.mp4" type="video/mp4">
+					</video>
+                                </td>
+                                <td>
+					<center><h3>Pace</h3></center>
+					<video width="320" height="240" controls>
+					<source src="./img/pace_vid_small.mp4" type="video/mp4">
+					</video>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                   <table border="0" cellspacing="10" cellpadding="0" align="center">
+                        <tbody>
+                            <tr>
+                                <td>
+					<center><h3>Walk</h3></center>
+					<video width="320" height="240" controls>
+					<source src="./img/walk_vid_small.mp4" type="video/mp4">
+					</video>
+                                </td>
+                                <td>
+					<center><h3>Three-One</h3></center>
+					<video width="320" height="240" controls>
+					<source src="./img/three_one_vid_small.mp4" type="video/mp4">
+					</video>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+
+                    <center>
+                        <h1>Acknowledgements</h1>
+                    </center>
+                    <div style="font-size:30px">
+                        <p align="justify">
+                            This work has taken place in the Autonomous Intelligent Robotics (AIR) Group at SUNY Binghamton. AIR research is supported in part by grants from the National Science Foundation (IIS-1925044 and REU Supplement), Ford Motor Company (URP Awards), OPPO (Faculty Research Award), and SUNY Research Foundation
+                        </p>
+                    </div> -->
+                    <br><br>
+
+</html>
