@@ -60,6 +60,8 @@ ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=True), train_cfg_dict)
 y_force_strengths = [25, 30, 35, 40, 45, 50, 55, 60]
 for y_force in y_force_strengths:
 
+	print("Force strength:", y_force)
+
 	accuracies = []
 	false_positive_percentages = []
 
@@ -161,7 +163,7 @@ for y_force in y_force_strengths:
 		f.write(str(np.mean(accuracies)) + ' ')
 		f.write(str(np.std(accuracies)) + ' ')
 		f.write(str(np.mean(false_positive_percentages)) + ' ')
-		f.write(str(np.std(accuracies)) + '\n')
+		f.write(str(np.std(false_positive_percentages)) + '\n')
 
 # print("Avg Accuracy:", np.mean(accuracies))
 # print("Accuracy STD:", np.std(accuracies))

@@ -238,7 +238,7 @@ class BulletEnv(gym.Env):
         #print("True base vel:", [round(x,2) for x in linear_vel])
         #print([round(x,2) for x in self.current_joint_angles])
 
-        applied_force = 2000
+        applied_force = 2500
         #if(((self.current_timestep % 50 == 0) or (self.current_timestep % 51 == 0) or (self.current_timestep % 52 == 0)) and self.current_timestep > 5):
         #if(self.current_timestep % 100 == 0 and self.current_timestep > 5):
         if(self.current_timestep == 100):
@@ -276,9 +276,9 @@ class BulletEnv(gym.Env):
 
         command = [1.25, 0, 0]
 
-        if(self.current_timestep >= 400):
+        # if(self.current_timestep >= 400):
 
-            command = [1.25, 0, 0.4]
+        #     command = [1.25, 0, 0.4]
             
         acceleration = [(linear_vel[i] - self.last_base_vel[i])/ (self.time_step*self.action_repeat) for i in range(3)]
         self.last_base_vel = linear_vel
@@ -334,3 +334,7 @@ class BulletEnv(gym.Env):
         isHealthy = (isBalanced and not isContact)
 
         return isHealthy
+
+    def getBaseVel(self):
+        linear_vel, angular_vel = p.getBaseVelocity(self.robot)
+        return linear_vel

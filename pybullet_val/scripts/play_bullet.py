@@ -1,4 +1,5 @@
 import time
+import peakdetect
 
 from bullet_env.bullet_env import BulletEnv
 from bullet_env.blank_env import BlankEnv
@@ -12,13 +13,48 @@ import pybullet as p
 import matplotlib.pyplot as plt
 
 
+def detect_force(estimated_forces):
+
+    #Scale by 10, such that magnitude is similar to other force detector
+    #Then, we can keep same params for peak detector
+    #estimated_forces *= 10
+
+    x_axis = [i for i in range(estimated_forces.shape[0])]
+
+    #Detect LEFT/RIGHT forces
+    #lr_peaks = peakdetect.peakdetect(estimated_forces, x_axis, lookahead=1, delta=0.25)
+    lr_peaks = peakdetect.peakdetect(estimated_forces, x_axis, lookahead=1, delta=0.05)
+
+    #Get indicies of LEFT and RIGHT peaks
+    left_peaks = np.array(lr_peaks[0]).astype(int)
+    if(left_peaks.shape[0] > 0):
+        left_peaks = left_peaks[:,0]
+
+    right_peaks = np.array(lr_peaks[1]).astype(int)
+    if(right_peaks.shape[0] > 0):
+        right_peaks = right_peaks[:,0]
+
+
+    #We consider a detected force as a peak within the last 50 timesteps
+    target_timestep = estimated_forces.shape[0] - 50 - 1
+    for peak in left_peaks:
+        if(peak >= target_timestep):
+            return 'LEFT'
+
+    for peak in right_peaks:
+        if(peak >= target_timestep):
+            return 'RIGHT'
+
+    return 'NONE'
+
+
 
 isForceDetector = True
-
+train_vel_only = True
 
 #Load env:
 #env = BulletEnv(isGUI=False)
-env = BulletEnv(isGUI=True, isForceDetector=isForceDetector)
+env = BulletEnv(isGUI=False, isForceDetector=isForceDetector)
 
 #Load Policy
 train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_coef': 0.01, 'gamma': 0.99, 'lam': 0.95, 'learning_rate': 0.001, 
@@ -31,12 +67,10 @@ train_cfg_dict = {'algorithm': {'clip_param': 0.2, 'desired_kl': 0.01, 'entropy_
                                 'runner_class_name': 'OnPolicyRunner', 'seed': 1}
 
 #ppo_runner = OnPolicyRunner(BlankEnv(), train_cfg_dict)
-ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=isForceDetector), train_cfg_dict)
+ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=isForceDetector, train_vel_only=train_vel_only), train_cfg_dict)
 
-"""
-4, 5, 2
-"""
-policy_name = "estimator4"
+#policy_name = "estimator4"
+policy_name = "only_vel3"
 ppo_runner.load("/home/david/Desktop/guide_dog/pybullet_val/saved_models/"+ policy_name + ".pt")
 
 policy, base_vel_estimator, force_estimator = ppo_runner.get_inference_policy()
@@ -46,29 +80,39 @@ obs,_ = env.reset()
 #Store past observations, most recent at top
 #env x num states x obs length
 obs_history = torch.zeros(1, force_estimator.num_timesteps, force_estimator.num_obs)#, device=self.device, dtype=torch.float)
+vel_history = torch.zeros(1, force_estimator.num_timesteps, 6)#, device=self.device, dtype=torch.float)
 
 estimated_forces = []
 
-for env_step in range(500):
+for env_step in range(400):
 
     #Shift all rows down 1 row (1 timestep)
     obs_history = torch.roll(obs_history, shifts=(0,1,0), dims=(0,1,0))
+    vel_history = torch.roll(vel_history, shifts=(0,1,0), dims=(0,1,0))
 
     obs = torch.Tensor(obs)
 
     #Set most recent state as first
     obs_history[:,0,:] = obs
 
-    #print(obs_history[:,0:3,3:40])
+    with torch.no_grad():
+        #Update obs with estimated base_vel (replace features at the end of obs)
+        estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
+
+    #Set most recent state as first
+    # linear_vel = torch.Tensor(np.array(env.getBaseVel()))
+    # vel_history[:,0,:3] = linear_vel
+    vel_history[:,0,:3] = estimated_base_vel
+    vel_history[:,0,3:] = obs[:3]
 
 
     with torch.no_grad():
 
-        #Update obs with estimated base_vel (replace features at the end of obs)
-        estimated_base_vel = base_vel_estimator(obs.unsqueeze(0))
-
         if(isForceDetector):
-            estimated_force = force_estimator(obs_history)
+            if(not train_vel_only):
+                estimated_force = force_estimator(obs_history)
+            else:
+                estimated_force = force_estimator(vel_history)
             estimated_forces.append(estimated_force.tolist()[0])
 
 
@@ -88,9 +132,19 @@ for env_step in range(500):
 
 
 if(isForceDetector):
-    estimated_forces = np.array(estimated_forces)
 
-    t = [i for i in range(estimated_forces.shape[0])]
-    plt.plot(t, estimated_forces[:,0])
-    plt.plot(t, estimated_forces[:,1])
+    estimated_forces = np.array(estimated_forces)[:,1]
+    x_axis = [i for i in range(estimated_forces.shape[0])]
+
+    detected_forces = []
+    for t in range(100, 400, 25):
+
+        forces = estimated_forces[:t]
+        detected_force = detect_force(forces)
+        if(detected_force != 'NONE'):
+            print(t, detected_force)
+
+    #plt.plot(t, estimated_forces[:,0])
+    plt.plot(x_axis, estimated_forces)
     plt.savefig(policy_name + '.png')
+
