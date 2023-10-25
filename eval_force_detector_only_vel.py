@@ -20,7 +20,7 @@ def detect_force(estimated_forces):
     x_axis = [i for i in range(estimated_forces.shape[0])]
 
     #Detect LEFT/RIGHT forces
-    lr_peaks = peakdetect.peakdetect(estimated_forces, x_axis, lookahead=1, delta=0.25)
+    lr_peaks = peakdetect.peakdetect(estimated_forces, x_axis, lookahead=1, delta=0.05)
 
     #Get indicies of LEFT and RIGHT peaks
     left_peaks = np.array(lr_peaks[0]).astype(int)
@@ -59,6 +59,8 @@ ppo_runner = OnPolicyRunner(BlankEnv(use_force_estimator=True, train_vel_only=Tr
 
 y_force_strengths = [25, 30, 35, 40, 45, 50, 55, 60]
 for y_force in y_force_strengths:
+
+	print("Force strength:", y_force)
 
 	accuracies = []
 	false_positive_percentages = []
@@ -110,12 +112,6 @@ for y_force in y_force_strengths:
 				vel_history[:,0,:3] = estimated_base_vel
 				vel_history[:,0,3:] = obs[:3]
 
-				print(estimated_base_vel)
-				print("-----------")
-				print(obs)
-				print("-----------")
-				print(vel_history)
-				zz
 
 				with torch.no_grad():
 					#Update obs with estimated base_vel and force (replace features at the end of obs)
@@ -142,6 +138,7 @@ for y_force in y_force_strengths:
 			    forces = estimated_forces[:t]
 			    detected_forces.append(detect_force(forces))
 
+
 			#Determine whether the true force was predicted
 			isCorrect = False
 			if(force_vector[1] > 0 and 'LEFT' in detected_forces):
@@ -167,11 +164,11 @@ for y_force in y_force_strengths:
 		false_positive_percentages.append(np.mean(percent_false_positives_lst))
 
 	#Save avg accuracy and false positive rates to file per y_force
-	with open("force_detector_accuracy.txt", "a") as f:
+	with open("force_detector_only_vel_accuracy.txt", "a") as f:
 		f.write(str(np.mean(accuracies)) + ' ')
 		f.write(str(np.std(accuracies)) + ' ')
 		f.write(str(np.mean(false_positive_percentages)) + ' ')
-		f.write(str(np.std(accuracies)) + '\n')
+		f.write(str(np.std(false_positive_percentages)) + '\n')
 
 # print("Avg Accuracy:", np.mean(accuracies))
 # print("Accuracy STD:", np.std(accuracies))

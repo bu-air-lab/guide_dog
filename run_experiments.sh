@@ -18,3 +18,7 @@ python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator5_vel
 # python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator8 --seed=8 --headless
 # python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator9 --seed=9 --headless
 # python3 legged_gym/scripts/train.py --task=guide_dog --trial_name=estimator10 --seed=10 --headless
+
+
+
+
